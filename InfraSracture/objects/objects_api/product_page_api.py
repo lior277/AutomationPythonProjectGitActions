@@ -1,11 +1,12 @@
 import string
 from InfraSracture.Infra.dal.api_accsess import ApiAccess
-from InfraSracture.Objects.Dtos.post_add_to_chart_request import PostAddToChartRequest
+from InfraSracture.objects.data_classes.post_add_to_chart_request import PostAddToChartRequest
 
 
-class ProductPage:
-    def __init__(self):
-        pass
+class ProductPageApi:
+
+    def __init__(self, api_access: ApiAccess):
+        self.api_access = api_access
 
     def add_item_to_chart(self, url: string):
         post_add_to_chart = PostAddToChartRequest(
@@ -14,5 +15,5 @@ class ProductPage:
             prod_id=1,
             flag=False)
 
-        ApiAccess.execute_post_request(self, url, post_add_to_chart)
+        self.api_access.execute_post_request(self, url, post_add_to_chart)
         return self

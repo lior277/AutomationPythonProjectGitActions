@@ -1,23 +1,22 @@
 import string
+
+import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
 
 class TestSuitBase:
-    browser_name = ""
 
-    def get_browser(browser_name: string) -> string:
-        TestSuitBase.browser_name = browser_name
-        return browser_name
-
-    def get_driver(self) -> webdriver:
-        if TestSuitBase.browser_name.lower() == "chrome":
-            chrome_option = TestSuitBase.get_web_driver_options(self="chrome")
-            driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_option)
+    @staticmethod
+    def get_driver(self, browser_name: string) -> webdriver:
+        if browser_name.lower() == "chrome":
+            chrome_option = TestSuitBase.get_web_driver_options(browser_name.lower())
+            driver = webdriver.Chrome(options=chrome_option)
+                #service=ChromeService(ChromeDriverManager().install()), options=chrome_option)
             driver.maximize_window()
-        elif TestSuitBase.browser_name.lower() == "firefox":
-            firefox_option = TestSuitBase.get_web_driver_options(self="firefox")
+        elif browser_name.lower() == "firefox":
+            firefox_option = TestSuitBase.get_web_driver_options(browser_name.lower())
             firefox_binary_path = '/usr/bin/firefox'
             options = firefox_option
             options.binary_location = firefox_binary_path
@@ -32,8 +31,8 @@ class TestSuitBase:
         match self:
             case "chrome":
                 options = webdriver.ChromeOptions()
-                options.add_argument('--start-maximised')
-                options.add_argument('--window-size=1920,1080')
+                # options.add_argument('--start-maximised')
+                #options.add_argument('--window-size=1920,1080')
                 options.add_argument('--ignore-ssl-errors')
                 options.add_argument('--ignore-certificate-errors')
                 options.add_argument('--no-sandbox')

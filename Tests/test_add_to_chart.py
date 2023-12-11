@@ -1,6 +1,6 @@
 import pytest
 
-from InfraSracture.Objects.product_page import ProductPage
+from InfraSracture.Objects.ObjectsApi.product_page_api import ProductPage
 
 
 class TestSecond:

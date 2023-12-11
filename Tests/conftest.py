@@ -1,8 +1,14 @@
-import string
 import pytest
-from selenium.webdriver.chrome import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
 
 
+def teardown():
+    # Teardown code here
+    print("Teardown: This will run once after all tests")
 
+
+@pytest.fixture(scope='session', autouse=True)
+def setup(request):
+    # Setup code here
+    print("Setup: This will run once before all tests")
+    yield
+    teardown()

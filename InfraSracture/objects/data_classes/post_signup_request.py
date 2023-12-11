@@ -7,9 +7,6 @@ from pydantic import BaseModel
 
 @dataclass_json
 @dataclass
-class PostAddToChartRequest():
-    id: str
-    cookie: str
-    prod_id: int
-    flag: bool
-
+class PostSignupRequest:
+    username: str
+    password: str
