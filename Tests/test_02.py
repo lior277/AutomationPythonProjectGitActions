@@ -1,12 +1,19 @@
-# test_suite_1.py
-import logging
-import pytest
+# pages.py
+import string
+
+from injector import Module, Binder
+from selenium import webdriver
 
 
-class TestClass:
-    def test_case_1(self):
-        logging.info("In test suite 1, test case 1")
-        print("Test case 1")
+class LoginPage:
+    def __init__(self, vv: string):
+        self.vv = vv
 
-    def test_case_2(self):
-        logging.info("In test suite 1, test case 2")
+    def login(self, username, password):
+        # Your login implementation using Selenium
+        pass
+
+
+class DIModule(Module):
+    def configure(self, binder: Binder) -> None:
+        binder.bind(LoginPage, to=LoginPage)

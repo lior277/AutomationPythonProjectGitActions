@@ -1,5 +1,3 @@
-from typing import Any, List
-
 import pytest
 
 from InfraSracture.Infra.dal.container.dependency_container import Container
@@ -8,10 +6,9 @@ from InfraSracture.objects.data_classes.product_data import Product
 from Tests.TestSuitBase import TestSuitBase
 
 
-class TestCheckupProcess(TestSuitBase):
-    driver = None
+class TestCheckupProcessPlayWright(TestSuitBase):
     container = Container()
-    demo_blaze_url = "https://www.demoblaze.com/index.html"
+    demo_blaze_url = "www.demoblaze.com"
     add_item_to_chart = "https://www.demoblaze.com/prod.html?idp_=1#"
     product_name = "Samsung galaxy s6"
     customer_name = "jones"
@@ -20,23 +17,27 @@ class TestCheckupProcess(TestSuitBase):
     customer_credit = "1111"
     order_month = "11"
     order_year = "2023"
+    page = None;
 
     @pytest.fixture(scope="function")
-    def setup(self):
+    def setup(self, request):
 
         def _setup(browser):
-            self.driver = TestSuitBase.get_driver(browser_name=browser)
-            # self.container.driver.override(self.driver)
-            self.driver.get(self.demo_blaze_url)
+            page = self.get_driver_playwright(browser_name=browser)
+            page.goto(self.demo_blaze_url)
 
         yield _setup
-        self.driver.close()
-        self.driver.quit()
+        request.addfinalizer(self.driver_dispose(page=page))
+
+    def tear_down(self):
+        if hasattr(self, 'page'):
+            self.page.close()
 
     @pytest.mark.xdist_group(name="group1")
     @pytest.mark.regression
-    @pytest.mark.parametrize("browsers", ["chrome"])
-    def test_checkup_process(self, setup, browsers):
+    @pytest.mark.parametrize("browsers", ["chrome", "firefox"])
+    @pytest.mark.asyncio
+    async def test_checkup_process_playwright(self, setup, browsers):
         setup(browsers)
         home_page_ui = self.container.home_page_ui(driver=self.driver)
         product_page_ui = self.container.product_page_ui(driver=self.driver)
@@ -45,7 +46,7 @@ class TestCheckupProcess(TestSuitBase):
         place_order_page_ui = self.container.place_order_page_ui(driver=self.driver)
         product_page_api = self.container.product_page_api()
         signup_page_api = self.container.signup_page_api()
-
+        signup_page_api.get_items("https://artlist.io/_next/data/F7ewnojrCY1FzxtJVYlwc/en/royalty-free-music.json")
         actual_products = (MongoDbAccess.select_all_documents_from_table_as_class(table_name="Products", T=Product))
         actual_product = next((product for product in actual_products if product.title == self.product_name))
 
