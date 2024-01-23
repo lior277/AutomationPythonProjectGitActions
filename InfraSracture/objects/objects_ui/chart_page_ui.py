@@ -13,4 +13,5 @@ class ChartPageUi:
 
     def click_on_place_order_btn(self):
         DriverEX.force_click(self.driver, self.place_order_btn)
+
         return self

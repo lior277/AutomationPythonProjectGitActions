@@ -1,9 +1,8 @@
 # container.py
-from typing import Type, Dict, get_type_hints
 
 from dependency_injector import containers, providers
 
-from InfraSracture.Infra.dal.api_accsess import ApiAccess
+from InfraSracture.Infra.dal.api_access.api_accsess import ApiAccess
 from InfraSracture.objects.objects_api.product_page_api import ProductPageApi
 from InfraSracture.objects.objects_api.signup_page_api import SignupPageApi
 from InfraSracture.objects.objects_ui.chart_page_ui import ChartPageUi

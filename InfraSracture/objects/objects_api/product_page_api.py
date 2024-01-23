@@ -1,5 +1,5 @@
 import string
-from InfraSracture.Infra.dal.api_accsess import ApiAccess
+from InfraSracture.Infra.dal.api_access.api_accsess import ApiAccess
 from InfraSracture.objects.data_classes.post_add_to_chart_request import PostAddToChartRequest
 
 

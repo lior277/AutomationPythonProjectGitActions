@@ -21,6 +21,6 @@ class ProductPageUi:
         DriverEX.force_click(self.driver, self.add_to_chart_btn)
         return self
 
-    def get_product_by_title_from_mongodb(self, product_title: string, table_name: string, class_name: T) -> Product:
-        self.all_product = MongoDbAccess.select_all_documents_from_table(table_name=table_name, T=class_name)
-        return next(filter(lambda x: x.title == product_title , self.all_product), None)
+    def get_product_by_title_from_mongodb(self, product_title: string, table_name: string) -> Product:
+        self.all_product = MongoDbAccess.select_all_documents_from_table_as_class(table_name=table_name)
+        return next(filter(lambda x: x.title == product_title, self.all_product), None)
