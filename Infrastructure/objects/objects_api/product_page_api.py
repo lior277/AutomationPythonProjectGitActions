@@ -1,6 +1,6 @@
 import string
-from InfraSracture.Infra.dal.api_access.api_accsess import ApiAccess
-from InfraSracture.objects.data_classes.post_add_to_chart_request import PostAddToChartRequest
+from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
+from Infrastructure.objects.data_classes.post_add_to_chart_request import PostAddToChartRequest
 
 
 class ProductPageApi:
@@ -16,4 +16,5 @@ class ProductPageApi:
             flag=False)
 
         self.api_access.execute_post_request(self, url, post_add_to_chart)
+
         return self
