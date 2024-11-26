@@ -4,8 +4,8 @@ from typing import TypeVar, List
 import pymongo
 from pymongo.database import Database
 
-from InfraSracture.Infra.dal.data_reposetory.data_rep import DataRep
-from InfraSracture.Infra.dal.json_encoder.json_encoder import CustomEncoder
+from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
+from Infrastructure.Infra.dal.json_encoder.json_encoder import CustomEncoder
 
 
 class MongoDbAccess:

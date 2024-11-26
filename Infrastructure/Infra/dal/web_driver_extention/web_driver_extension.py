@@ -9,7 +9,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.remote.webelement import WebElement
 
-from InfraSracture.Infra.dal.string_extentions.string_extentions import is_null_or_empty
+from Infrastructure.Infra.dal.string_extentions.string_extentions import is_null_or_empty
 
 
 def ignore_exception_types():

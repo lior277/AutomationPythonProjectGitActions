@@ -3,9 +3,9 @@ from typing import TypeVar
 
 from selenium.webdriver.common.by import By
 
-from InfraSracture.Infra.dal.mongo_db.mongo_db_access import MongoDbAccess
-from InfraSracture.Infra.dal.web_driver_extention.web_driver_extension import DriverEX
-from InfraSracture.objects.data_classes.product_data import Product
+from Infrastructure.Infra.dal.mongo_db.mongo_db_access import MongoDbAccess
+from Infrastructure.Infra.dal.web_driver_extention.web_driver_extension import DriverEX
+from Infrastructure.objects.data_classes.product_data import Product
 
 
 class ProductPageUi:

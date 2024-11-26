@@ -1,6 +1,6 @@
 import pytest
 
-from InfraSracture.Objects.ObjectsApi.product_page_api import ProductPage
+from Infrastructure.objects.objects_api.product_page_api import ProductPageApi
 
 
 class TestSecond:
@@ -8,4 +8,4 @@ class TestSecond:
 
     @pytest.mark.sanity
     def test_add_to_chart(self):
-        ProductPage.add_item_to_chart(self, TestSecond.url)
+        ProductPageApi.add_item_to_chart(self, TestSecond.url)

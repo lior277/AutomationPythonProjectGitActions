@@ -2,9 +2,9 @@ from typing import Any, List
 
 import pytest
 
-from InfraSracture.Infra.dal.container.dependency_container import Container
-from InfraSracture.Infra.dal.mongo_db.mongo_db_access import MongoDbAccess
-from InfraSracture.objects.data_classes.product_data import Product
+from Infrastructure.Infra.dal.container.dependency_container import Container
+from Infrastructure.Infra.dal.mongo_db.mongo_db_access import MongoDbAccess
+from Infrastructure.objects.data_classes.product_data import Product
 from Tests.TestSuitBase import TestSuitBase
 
 

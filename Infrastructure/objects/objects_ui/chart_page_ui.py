@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-from InfraSracture.Infra.dal.web_driver_extention.web_driver_extension import DriverEX
+from Infrastructure.Infra.dal.web_driver_extention.web_driver_extension import DriverEX
 
 
 class ChartPageUi:

@@ -1,6 +1,6 @@
 import string
-from InfraSracture.Infra.dal.api_access.api_accsess import ApiAccess
-from InfraSracture.objects.data_classes.post_signup_request import PostSignupRequest
+from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
+from Infrastructure.objects.data_classes.post_signup_request import PostSignupRequest
 
 
 class SignupPageApi:

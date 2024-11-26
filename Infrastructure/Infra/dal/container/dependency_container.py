@@ -2,14 +2,14 @@
 
 from dependency_injector import containers, providers
 
-from InfraSracture.Infra.dal.api_access.api_accsess import ApiAccess
-from InfraSracture.objects.objects_api.product_page_api import ProductPageApi
-from InfraSracture.objects.objects_api.signup_page_api import SignupPageApi
-from InfraSracture.objects.objects_ui.chart_page_ui import ChartPageUi
-from InfraSracture.objects.objects_ui.home_page_ui import HomePageUi
-from InfraSracture.objects.objects_ui.place_order_form_ui import PlaceOrderPageUi
-from InfraSracture.objects.objects_ui.product_page_ui import ProductPageUi
-from InfraSracture.objects.objects_ui.upper_menu_ui import UpperMenuUi
+from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
+from Infrastructure.objects.objects_api.product_page_api import ProductPageApi
+from Infrastructure.objects.objects_api.signup_page_api import SignupPageApi
+from Infrastructure.objects.objects_ui.chart_page_ui import ChartPageUi
+from Infrastructure.objects.objects_ui.home_page_ui import HomePageUi
+from Infrastructure.objects.objects_ui.place_order_form_ui import PlaceOrderPageUi
+from Infrastructure.objects.objects_ui.product_page_ui import ProductPageUi
+from Infrastructure.objects.objects_ui.upper_menu_ui import UpperMenuUi
 
 
 class Container(containers.DeclarativeContainer):

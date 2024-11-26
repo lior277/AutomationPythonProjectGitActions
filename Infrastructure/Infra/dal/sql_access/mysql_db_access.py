@@ -4,10 +4,10 @@ from typing import TypeVar, List
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from InfraSracture.Infra.common.common_functionality import CommonFunctionality as CF
-from InfraSracture.Infra.dal.data_reposetory.data_rep import DataRep
-from InfraSracture.Infra.dal.json_encoder.json_encoder import CustomEncoder
-from InfraSracture.Infra.dal.sql_access.models import Base, Product
+from Infrastructure.Infra.common.common_functionality import CommonFunctionality as CF
+from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
+from Infrastructure.Infra.dal.json_encoder.json_encoder import CustomEncoder
+from Infrastructure.Infra.dal.sql_access.models import Base, Product
 
 
 class MySqlDbAccess:
