@@ -1,4 +1,3 @@
-import string
 
 from selenium.webdriver.common.by import By
 
@@ -14,7 +13,7 @@ class CustomerLoginPageUi:
         self.password = By.CSS_SELECTOR, "input[id='pass']"
         self.sign_in_btn = By.CSS_SELECTOR, "button[id='send2']"
 
-    def navigate_to_url(self, url: string):
+    def navigate_to_url(self, url: str):
         self.driver.get(url)
         return self
 

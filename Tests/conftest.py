@@ -1,4 +1,6 @@
 import pytest
+from injector import Injector
+from Infrastructure.Infra.dal.container.dependency_container import AppModule
 
 
 def teardown():
@@ -12,3 +14,8 @@ def setup(request):
     print("Setup: This will run once before all tests")
     yield
     teardown()
+
+@pytest.fixture(scope="session")
+def injector() -> Injector:
+    """Provide the dependency injector instance for tests."""
+    return Injector([AppModule])

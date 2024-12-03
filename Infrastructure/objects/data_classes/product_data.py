@@ -1,14 +1,13 @@
-import string
 from dataclasses import dataclass
 
 
 @dataclass
 class Product:
-    _id: string
-    cat: string
-    desc: string
+    _id: str
+    cat: str
+    desc: str
     id: int
-    img: string
+    img: str
     price: float
-    title: string
+    title: str
 

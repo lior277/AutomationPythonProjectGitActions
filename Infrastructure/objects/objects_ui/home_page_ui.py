@@ -1,4 +1,3 @@
-import string
 
 from injector import inject
 from selenium.webdriver.common.by import By
@@ -14,7 +13,7 @@ class HomePageUi:
     # locators
         self.__product = "//a[contains(.,'{0}')]"
 
-    def click_on_item_from_home_store(self, product_name: string):
+    def click_on_item_from_home_store(self, product_name: str):
         locator = By.XPATH, self.__product.format(product_name)
         DriverEX.force_click(self.driver, locator)
         return self

@@ -1,5 +1,4 @@
 import json
-import string
 from typing import TypeVar, List
 import pymongo
 from pymongo.database import Database
@@ -19,7 +18,7 @@ class MongoDbAccess:
         return database
 
     @staticmethod
-    def select_all_documents_from_table_as_class(table_name: string, T) -> List[T]:
+    def select_all_documents_from_table_as_class(table_name: str, T) -> List[T]:
         database = MongoDbAccess.initialize_mongo_client()
         collection = database[table_name]
         all_documents = collection.find()

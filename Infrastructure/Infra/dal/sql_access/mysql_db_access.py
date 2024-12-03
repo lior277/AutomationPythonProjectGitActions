@@ -1,13 +1,10 @@
-import json
-import string
 from typing import TypeVar, List
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from Infrastructure.Infra.common.common_functionality import CommonFunctionality as CF
 from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
-from Infrastructure.Infra.dal.json_encoder.json_encoder import CustomEncoder
-from Infrastructure.Infra.dal.sql_access.models import Base, Product
+from Infrastructure.Infra.dal.sql_access import Base, Product
 
 
 class MySqlDbAccess:
@@ -23,7 +20,7 @@ class MySqlDbAccess:
         return session
 
     @staticmethod
-    def select_all_rows_by_table_name(table_name: string) -> List[T]:
+    def select_all_rows_by_table_name(table_name: str) -> List[T]:
         class_name = CF.find_class_by_name(table_name)
         # Query all rows using the Product model
         all_rows = MySqlDbAccess.initialize_session().query(class_name).all()

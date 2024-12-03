@@ -1,4 +1,3 @@
-import string
 from time import sleep
 from typing import Any
 
@@ -75,7 +74,7 @@ class ForceClick(object):
 
 
 class SendsKeysAuto(object):
-    def __init__(self, by: tuple, input_text: string):
+    def __init__(self, by: tuple, input_text: str):
         self.by = by
         self.input_text = input_text
 
@@ -101,7 +100,7 @@ class GetElementText(object):
     def __init__(self, by: tuple):
         self.by = by
 
-    def __call__(self, driver: webdriver) -> string:
+    def __call__(self, driver: webdriver) -> str:
         try:
             element = driver.find_element(*self.by)
             new_string = element.get_attribute("innerText")
@@ -131,11 +130,11 @@ class DriverEX:
          .until(ForceClick(by)))
 
     @staticmethod
-    def get_element_text(driver: webdriver, by: tuple) -> string:
+    def get_element_text(driver: webdriver, by: tuple) -> str:
         return (WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types())
                 .until(GetElementText(by=by)))
 
     @staticmethod
-    def send_keys_auto(driver: webdriver, by: tuple, input_text: string) -> None:
+    def send_keys_auto(driver: webdriver, by: tuple, input_text: str) -> None:
         (WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types())
          .until(SendsKeysAuto(by=by, input_text=input_text)))
