@@ -9,7 +9,7 @@ from Infrastructure.objects.objects_ui.home_page_ui import HomePageUi
 from Infrastructure.objects.objects_ui.place_order_form_ui import PlaceOrderPageUi
 from Infrastructure.objects.objects_ui.product_page_ui import ProductPageUi
 from Infrastructure.objects.objects_ui.upper_menu_ui import UpperMenuUi
-from Tests import TestSuitBase
+from tests import test_suit_Base
 
 
 class TestCheckupProcess:
