@@ -6,6 +6,7 @@ from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
 class TestSecond:
     url = "https://api.demoblaze.com/addtocart"
 
+    @pytest.mark.regression
     def test_add_to_chart(self):
         # Step 1: Initialize ApiAccess
         api_access = ApiAccess()

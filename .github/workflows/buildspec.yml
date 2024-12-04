@@ -13,7 +13,7 @@ phases:
     commands:
       - echo "Running tests..."
       - pytest -v tests/
-      - pytest tests/ --junitxml=reports/test-results.xml || exit 1
+      - pytest tests/ --junitxml=reports/test-results.xml -v
 
 artifacts:
   files:

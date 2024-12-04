@@ -1,1 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="1" tests="2" time="0.399" timestamp="2024-12-04T16:41:41.675784+02:00" hostname="DESKTOP-MMOR5TH"><testcase classname="tests.test_add_to_chart.TestSecond" name="test_add_to_chart" time="0.358" /><testcase classname="tests.test_checkout_process.TestCheckupProcess" name="test_checkup_process[chrome]" time="0.001"><skipped type="pytest.skip" message="unconditional skip">C:\Users\User\PycharmProjects\AutomationPythonProject\tests\test_checkout_process.py:40: unconditional skip</skipped></testcase></testsuite></testsuites>
+<?xml version="1.0"
+        encoding="utf-8"?><testsuites><testsuite
+        name="pytest" errors="0" failures="0" skipped="1" tests="2" time="0.399"
+                                                             timestamp="2024-12-04T16:41:41.675784+02:00"
+        hostname="DESKTOP-MMOR5TH"><testcase classname="tests.test_add_to_chart.TestSecond"
+                                             name="test_add_to_chart" time="0.358" />
+    <testcase classname="tests.test_checkout_process.TestCheckupProcess"
+              name="test_checkup_process[chrome]" time="0.001">
+        <skipped type="pytest.skip" message="unconditional
+        skip">C:\Users\User\PycharmProjects\AutomationPythonProject\tests\test_checkout_process.py:40:
+            unconditional skip</skipped></testcase></testsuite></testsuites>
