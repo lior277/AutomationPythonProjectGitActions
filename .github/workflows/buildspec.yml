@@ -5,21 +5,20 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - echo "Setting up virtual environment..."
-      - python -m venv .venv
-      - source .venv/bin/activate
+      - echo "Installing Python dependencies..."
       - python -m pip install --upgrade pip
-      - pip install -r requirements.txt
-      - apt-get update && apt-get install -y chromium-browser chromium-driver
+      - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
   build:
     commands:
-      - echo "Running tests with pytest..."
-      - pytest -v tests/ --junitxml=reports/test-results.xml || exit 1
+      - echo "Running tests..."
+      - pytest tests/ --junitxml=reports/test-results.xml || exit 1
 
 artifacts:
   files:
-    - reports/test-results.xml
-
-cache:
-  paths:
-    - /root/.cache/pip
+    - '**/*'
+reports:
+  pytest_reports:
+    files:
+      - '**/test-results.xml'
+    base-directory: reports
