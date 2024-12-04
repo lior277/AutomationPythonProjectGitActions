@@ -1,24 +1,25 @@
+version: 0.2
 
 phases:
   install:
     runtime-versions:
       python: 3.11
     commands:
-      - echo "Installing Python dependencies..."
+      - echo "Setting up virtual environment..."
+      - python -m venv .venv
+      - source .venv/bin/activate
       - python -m pip install --upgrade pip
-      - pip install -r requirements.txt
-
-  pre_build:
-    commands:
-      - echo "Setting up for tests..."
-      - mkdir -p reports
-
   build:
     commands:
+      - echo "Installing dependencies..."
+      - pip install -r requirements.txt
       - echo "Running tests..."
-      - pytest tests --junitxml=reports/test-results.xml || exit 1
+      - pytest --junitxml=reports/test-results.xml || exit 1
 
 artifacts:
   files:
     - reports/test-results.xml
-  discard-paths: no
+
+cache:
+  paths:
+    - /root/.cache/pip
