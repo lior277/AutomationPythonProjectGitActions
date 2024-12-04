@@ -37,7 +37,7 @@ venv.bak/
 # VSCode settings
 .vscode/
 
-# Test cache
+# Test cache and coverage
 .pytest_cache/
 nosetests.xml
 coverage.xml
@@ -47,7 +47,23 @@ coverage.xml
 
 # Environment variables
 .env
-.env.*
+.env.* # Specific environment files, like `.env.test`, `.env.prod`
 
-# Logs
+# Logs and reports
 *.log
+*.out
+*.err
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Other IDE-specific files
+*.swp
+*.swo
+*~
+
+# Additional cleanup suggestions
+*.bak  # Backup files
+*.tmp  # Temporary files
+*.old  # Old version files
