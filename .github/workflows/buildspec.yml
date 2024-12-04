@@ -3,18 +3,23 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      python: 3.10
+      python: 3.11
     commands:
       - echo "Installing Python dependencies..."
       - python -m pip install --upgrade pip
       - pip install -r requirements.txt
 
+  pre_build:
+    commands:
+      - echo "Setting up for tests..."
+      - mkdir -p reports
+
   build:
     commands:
       - echo "Running tests..."
-      - pytest --junitxml=reports/test-results.xml  # Save test results in a specific directory for artifacts
+      - pytest --junitxml=reports/test-results.xml || exit 1
 
 artifacts:
   files:
-    - reports/test-results.xml  # Ensure artifacts refer to the correct path
-  discard-paths: no             # Preserve directory structure for better organization
+    - reports/test-results.xml
+  discard-paths: no
