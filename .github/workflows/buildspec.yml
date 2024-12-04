@@ -12,8 +12,9 @@ phases:
   build:
     commands:
       - echo "Running tests..."
-      - pytest --junitxml=test-results.xml
+      - pytest --junitxml=reports/test-results.xml  # Save test results in a specific directory for artifacts
 
 artifacts:
   files:
-    - test-results.xml
+    - reports/test-results.xml  # Ensure artifacts refer to the correct path
+  discard-paths: no             # Preserve directory structure for better organization
