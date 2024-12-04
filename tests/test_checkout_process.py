@@ -29,7 +29,7 @@ class TestCheckupProcess:
     def setup(self):
         """Setup and teardown for browser driver."""
         def _setup(browser):
-            self.driver = TestSuitBase.get_driver(browser_name=browser)
+            self.driver = test_suit_Base.get_driver(browser_name=browser)
             self.driver.get(self.demo_blaze_url)
 
         yield _setup
