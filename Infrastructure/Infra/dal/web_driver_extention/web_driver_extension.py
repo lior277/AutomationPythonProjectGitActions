@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Any
+from typing import Any, List
 
 from selenium.common import StaleElementReferenceException, NoSuchElementException, ElementNotInteractableException, \
     ElementNotVisibleException, ElementNotSelectableException, InvalidSelectorException, NoSuchFrameException, \
@@ -23,7 +23,6 @@ def ignore_exception_types():
 
     return ignore_exception
 
-
 class SearchElement(object):
     def __init__(self, by: tuple):
         self.by = by
@@ -37,6 +36,28 @@ class SearchElement(object):
             sleep(0.3)
             return None
 
+class NavigateToUrl(object):
+    def __init__(self, url: str):
+        self.url = url
+
+    def __call__(self, driver: webdriver) -> None:
+        try:
+            driver.get(self.url)
+        except StaleElementReferenceException:
+            sleep(0.3)
+
+class SearchElements(object):
+    def __init__(self, by: tuple):
+        self.by = by
+
+    def __call__(self, driver: webdriver) -> Any:
+        try:
+            elements = driver.find_elements(*self.by)
+            return elements
+
+        except StaleElementReferenceException:
+            sleep(0.3)
+            return None
 
 class ScrollToElement(object):
     def __init__(self, by: tuple):
@@ -52,22 +73,32 @@ class ScrollToElement(object):
             sleep(0.3)
             return None
 
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.remote.webdriver import WebDriver
+from time import sleep
 
 class ForceClick(object):
     def __init__(self, by: tuple):
         self.by = by
 
-    def __call__(self, driver: webdriver) -> Any:
+    def __call__(self, driver: WebDriver) -> WebElement:
         try:
-            element = driver.find_element(*self.by)
+            if isinstance(self.by, tuple):
+                element = driver.find_element(*self.by)
+
+            elif isinstance(self.by, WebElement):
+                element = self.by
+            else:
+                raise ValueError("Argument 'by' should be a tuple or WebElement.")
 
             if element.is_enabled():
                 element.click()
-
             return element
+
         except StaleElementReferenceException:
             sleep(0.3)
             return None
+
         except ElementNotInteractableException as e:
             ScrollToElement(self.by)
             return None
@@ -125,9 +156,20 @@ class DriverEX:
                 .until(SearchElement(by)))
 
     @staticmethod
-    def force_click(driver: webdriver, by: tuple) -> None:
-        (WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types())
-         .until(ForceClick(by)))
+    def navigate_to_url(driver: webdriver, url: str) -> WebElement:
+        return (WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types())
+                .until(NavigateToUrl(url)))
+
+    @staticmethod
+    def search_elements(driver: webdriver, by: tuple) -> List[WebElement]:
+        return (WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types())
+                .until(SearchElements(by)))
+
+    @staticmethod
+    def force_click(self, driver: WebDriver, by) -> None:
+        force_click = ForceClick(by)
+        WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types()) \
+            .until(force_click)
 
     @staticmethod
     def get_element_text(driver: webdriver, by: tuple) -> str:
