@@ -1,39 +1,32 @@
-name: Build and Test Docker Container
+name: CI Pipeline for AutomationPythonProjectBriefCam
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on push to the 'main' branch
   pull_request:
     branches:
-      - main
+      - main  # Trigger on pull request targeting 'main'
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest  # The job will run on an Ubuntu runner
 
     steps:
-      # Step 1: Checkout code from the repository
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2  # Checkout the repository code
 
-      # Step 2: Set up Docker
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-        with:
-          version: latest
+        uses: docker/setup-buildx-action@v1  # Set up Docker Buildx for multi-platform builds
 
-      # Step 3: Build the Docker image
       - name: Build Docker image
         run: |
-          docker build -t my-python-app .
+          docker build -t automation-python-app .  # Build the Docker image using your Dockerfile
 
-      # Step 4: Run tests using Docker
       - name: Run tests inside Docker container
         run: |
-          docker run --rm my-python-app pytest  # Run pytest inside the container
+          docker run --rm automation-python-app pytest  # Run pytest inside the Docker container
 
-      # Step 5: Optionally, run the application (uncomment if needed)
-      # - name: Run application in Docker container
-      #   run: |
-      #     docker run -d -p 80:80 my-python-app  # Start the app
+      - name: Clean up Docker image
+        run: |
+          docker rmi automation-python-app  # Optionally clean up the Docker image after testing
