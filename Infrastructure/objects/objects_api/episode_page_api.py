@@ -26,7 +26,7 @@ class EpisodePageApi:
             status=character_data.get('status', 'unknown'),
             species=character_data.get('species', 'unknown'),
             location=character_data['location']['name'] if 'location' in character_data else None,
-            gender=character_data.get('gender', 'unknown'),
+            gender=character_data.get('gender', 'unknown' ),
             origin=character_data.get('origin', 'unknown'),
             image=character_data.get('image', 'unknown'),
             episode=character_data.get('episode', []),
