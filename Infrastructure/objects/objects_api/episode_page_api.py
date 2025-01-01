@@ -31,7 +31,7 @@ class EpisodePageApi:
             image=character_data.get('image', 'unknown'),
             episode=character_data.get('episode', []),
             url=character_data.get('url', 'unknown'),
-            created=character_data.get('created', 'unknown')
+            created=character_data.get('created', 'unknown' )
         )
         return character
 
