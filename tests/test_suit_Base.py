@@ -1,21 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
-import os
-
+from webdriver_manager.chrome import ChromeDriverManager
 
 class TestSuitBase:
     @staticmethod
     def get_driver() -> webdriver:
         chrome_options = TestSuitBase.get_web_driver_options()
 
-        # Provide path to chromedriver manually
-        chromedriver_path = "C:\chromedriver\chromedriver.exe"
-
-        # Initialize ChromeDriver with manually set path
-        driver = (webdriver
-                  .Chrome(service=ChromeService(executable_path=chromedriver_path),
-                          options=chrome_options))
+        # Automatically fetch the correct version of chromedriver
+        driver = webdriver.Chrome(
+            service=ChromeService(ChromeDriverManager().install()),  # Automatically gets the right version
+            options=chrome_options
+        )
 
         driver.maximize_window()
         return driver
