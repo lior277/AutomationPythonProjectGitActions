@@ -35,6 +35,7 @@ RUN apt-get update -y && \
     libtk8.6 \
     tcl8.6 \
     tk8.6 \
+    unzip \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -46,7 +47,6 @@ RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd
 
 # Install ChromeDriver
 RUN curl -sS https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip -o chromedriver.zip && \
-    apt-get install -y unzip && \
     unzip chromedriver.zip && \
     mv chromedriver /usr/local/bin/ && \
     rm chromedriver.zip
