@@ -29,6 +29,9 @@ RUN apt-get update -y && \
     fonts-liberation \
     xdg-utils \
     libayatana-appindicator3-1 \
+    libdrm2 \
+    libgbm1 \
+    libvulkan1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
