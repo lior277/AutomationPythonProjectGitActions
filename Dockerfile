@@ -4,12 +4,12 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install necessary dependencies for Google Chrome, selenium, and ChromeDriver
-RUN apt-get update -y && \
+# Install curl and necessary dependencies for Google Chrome
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     wget \
-    dpkg \
+    unzip \
     libx11-6 \
     libx11-xcb1 \
     libxdamage1 \
@@ -26,20 +26,14 @@ RUN apt-get update -y && \
     libxtst6 \
     libappindicator3-1 \
     libappindicator1 \
+    libindicator7 \
     fonts-liberation \
     xdg-utils \
-    libayatana-appindicator3-1 \
-    libdrm2 \
-    libgbm1 \
     libvulkan1 \
-    libtk8.6 \
-    tcl8.6 \
-    tk8.6 \
-    unzip \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    libgbm1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome browser
+# Install Google Chrome
 RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o google-chrome.deb && \
     dpkg -i google-chrome.deb && \
     apt-get install -y -f && \
