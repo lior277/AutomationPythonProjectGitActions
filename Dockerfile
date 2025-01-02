@@ -1,8 +1,14 @@
-# Use an official Python runtime as a parent image
+# Use an official Python runtime as a parent image (Python 3.10)
 FROM python:3.10-slim
 
 # Set the working directory in the container
 WORKDIR /app
+
+# Install the dependencies required by tkinter
+RUN apt-get update && \
+    apt-get install -y \
+    libtk8.6 \
+    && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Copy the current directory contents into the container at /app
 COPY . /app
