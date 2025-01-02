@@ -14,7 +14,7 @@ class TestSuitBase:
 
         if is_debug:
             # Disable headless mode for debugging (GUI mode)
-            print("Running in debug mode - Chrome GUI will open.")
+            print("Running in debug mode - Chrome GUI will open. ")
             chrome_options.add_argument('--no-sandbox')  # Needed for some systems in Docker
             chrome_options.add_argument('--lang=en-GB')
             chrome_options.add_argument('--accept-language=en-US,en;q=0.9')
