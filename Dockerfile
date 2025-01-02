@@ -4,8 +4,9 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install curl, dpkg and other necessary dependencies for Google Chrome
-RUN apt-get update && \
+# Install necessary dependencies for Google Chrome and other tools
+RUN apt-get update -y && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -31,7 +32,7 @@ RUN apt-get update && \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Debugging: Verify curl and dpkg
+# Debugging: Verify the installation of curl and dpkg
 RUN curl --version && dpkg --version
 
 # Download and install the Chrome browser
