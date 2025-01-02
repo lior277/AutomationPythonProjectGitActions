@@ -26,7 +26,6 @@ RUN apt-get update && \
     libxtst6 \
     libappindicator3-1 \
     libappindicator1 \
-    libindicator7 \
     fonts-liberation \
     xdg-utils \
     libvulkan1 \
