@@ -4,9 +4,8 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install necessary dependencies for Google Chrome and other tools
+# Install curl and necessary dependencies for Google Chrome
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -27,14 +26,11 @@ RUN apt-get update -y && \
     libxtst6 \
     libappindicator3-1 \
     libappindicator1 \
-    libindicator7 \
     fonts-liberation \
     xdg-utils \
+    libayatana-appindicator3-1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
-
-# Debugging: Verify if curl and dpkg are installed properly
-RUN curl --version && dpkg --version
 
 # Download and install the Chrome browser
 RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o google-chrome.deb && \
