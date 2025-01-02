@@ -4,7 +4,7 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install curl and necessary dependencies for Google Chrome
+# Install curl, necessary dependencies for Google Chrome, and tkinter dependencies
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -32,6 +32,9 @@ RUN apt-get update -y && \
     libdrm2 \
     libgbm1 \
     libvulkan1 \
+    libtk8.6 \
+    tcl8.6 \
+    tk8.6 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
