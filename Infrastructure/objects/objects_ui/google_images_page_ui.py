@@ -1,5 +1,4 @@
 from datetime import datetime
-from tkinter import Image
 from PIL import Image
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.common.by import By
