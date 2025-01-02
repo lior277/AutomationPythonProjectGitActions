@@ -4,7 +4,7 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install curl, necessary dependencies for Google Chrome, and tkinter dependencies
+# Install necessary dependencies for Google Chrome, selenium, and ChromeDriver
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -38,11 +38,18 @@ RUN apt-get update -y && \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Download and install the Chrome browser
+# Install Chrome browser
 RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o google-chrome.deb && \
     dpkg -i google-chrome.deb && \
     apt-get install -y -f && \
     rm google-chrome.deb
+
+# Install ChromeDriver
+RUN curl -sS https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip -o chromedriver.zip && \
+    apt-get install -y unzip && \
+    unzip chromedriver.zip && \
+    mv chromedriver /usr/local/bin/ && \
+    rm chromedriver.zip
 
 # Copy the current directory contents into the container at /app
 COPY . /app
