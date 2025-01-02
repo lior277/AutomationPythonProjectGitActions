@@ -30,9 +30,10 @@ RUN apt-get update -y && \
     libindicator7 \
     fonts-liberation \
     xdg-utils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Debugging: Verify the installation of curl and dpkg
+# Debugging: Verify if curl and dpkg are installed properly
 RUN curl --version && dpkg --version
 
 # Download and install the Chrome browser
