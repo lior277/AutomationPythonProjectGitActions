@@ -4,14 +4,29 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
-
-# Install necessary dependencies for Google Chrome
+# Install curl and necessary dependencies for Google Chrome
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    libx11-6 \
+    libx11-xcb1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgdk-pixbuf2.0-0 \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
+    libxss1 \
+    libasound2 \
+    libxtst6 \
+    libappindicator3-1 \
+    libappindicator1 \
+    libindicator7 \
     fonts-liberation \
-    libvulkan1 \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,6 +35,9 @@ RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd
     dpkg -i google-chrome.deb && \
     apt-get install -y -f && \
     rm google-chrome.deb
+
+# Copy the current directory contents into the container at /app
+COPY . /app
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
