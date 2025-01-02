@@ -4,11 +4,12 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install curl and necessary dependencies for Google Chrome
+# Install curl, dpkg and other necessary dependencies for Google Chrome
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     wget \
+    dpkg \
     libx11-6 \
     libx11-xcb1 \
     libxdamage1 \
@@ -29,6 +30,9 @@ RUN apt-get update && \
     fonts-liberation \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Debugging: Verify curl and dpkg
+RUN curl --version && dpkg --version
 
 # Download and install the Chrome browser
 RUN curl -sS https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o google-chrome.deb && \
