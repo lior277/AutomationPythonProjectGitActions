@@ -7,10 +7,7 @@ from Infrastructure.objects.objects_api.episode_page_api import EpisodePageApi
 
 @pytest.mark.asyncio
 class TestEpisodePageApi:
-    def __init__(self):
-        pass
-
-    @pytest.mark.regression
+    #@pytest.mark.regression
     async def test_randomly_choose_two_characters_api(self):
         episode_page_api = EpisodePageApi()
 
