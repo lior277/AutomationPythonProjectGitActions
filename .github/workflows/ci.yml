@@ -1,0 +1,67 @@
+name: CI Pipeline for AutomationPythonProjectGithubActions
+
+on:
+  push:
+    branches:
+      - main  # Trigger workflow when pushing to 'main' branch
+  pull_request:
+    branches:
+      - main  # Trigger workflow for pull requests targeting 'main' branch
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest  # The job will run on an Ubuntu runner
+
+    services:
+      selenium-hub:
+        image: selenium/hub:latest
+        ports:
+          - 4444:4444  # Expose the Grid Hub on port 4444 for WebDriver connections
+        env:
+          HUB_PORT_4444_TCP_ADDR: 127.0.0.1
+          HUB_PORT_4444_TCP_PORT: 4444
+        restart: always
+
+      selenium-node:
+        image: selenium/node-chrome:latest
+        depends_on:
+          - selenium-hub
+        environment:
+          HUB_HOST: selenium-hub
+          HUB_PORT: 4444
+        restart: always
+        scale: 15  # Scale the number of selenium nodes to 15
+        mem_limit: 1g  # Set memory limit of 1 GB per node
+
+    steps:
+      # Step 1: Checkout code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2  # Use the checkout action to retrieve the code from the repository
+
+      # Step 2: Set up Docker Buildx (optional, but recommended for multi-platform builds)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1  # Action to set up Docker Buildx for building multi-platform Docker images
+        with:
+          version: latest  # Specify the version of Buildx to use
+
+      # Step 3: Build the Docker image for your Python app
+      - name: Build Docker image
+        run: |
+          docker build -t automation-python-app .  # Build Docker image using the Dockerfile in the repository
+
+      # Step 4: Run tests using pytest inside the Docker container
+      - name: Run tests inside Docker container
+        run: |
+          docker run --rm automation-python-app pytest  # Run the tests inside the container using pytest
+
+      # Step 5: Optionally, run the app (if needed) after tests
+      # Uncomment the following lines if you want to start the app after the tests
+      # - name: Run the application
+      #   run: |
+      #     docker run -d -p 80:80 automation-python-app  # Start the app container
+
+      # Step 6: Clean up the Docker image after the tests
+      - name: Clean up Docker image
+        run: |
+          docker rmi automation-python-app  # Remove the Docker image after the tests are complete
