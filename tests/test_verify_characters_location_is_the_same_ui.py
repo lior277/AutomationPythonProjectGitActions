@@ -3,7 +3,6 @@ from Infrastructure.objects.objects_api.episode_page_api import EpisodePageApi
 from Infrastructure.objects.objects_ui.google_home_page_ui import GoogleHomePageUi
 from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
 
-#@pytest.mark.regression
 @pytest.mark.asyncio
 async def test_verify_characters_location_is_the_same_ui(setup_and_teardown):
 

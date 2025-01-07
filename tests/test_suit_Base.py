@@ -10,7 +10,7 @@ class TestSuitBase:
         chrome_options = ChromeOptions()
 
         # Check if we are in debug mode (you can set this as an environment variable or a flag)
-        is_debug = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+        is_debug = os.getenv('DEBUG_MODE', 'false').lower() == 'false'
 
         if is_debug:
             # Disable headless mode for debugging (GUI mode)
