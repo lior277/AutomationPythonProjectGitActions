@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   selenium-hub:
@@ -36,12 +35,12 @@ services:
     networks:
       - selenium-grid
     deploy:
-      replicas: 15  # Scale to 15 nodes
+      replicas: 13  # Scale to 13 nodes
       resources:
         limits:
-          memory: 1g  # Memory limit of 1GB per node
+          memory: 1g
         reservations:
-          memory: 1g  # Reserve 1GB memory per node
+          memory: 1g
 
 networks:
   selenium-grid:

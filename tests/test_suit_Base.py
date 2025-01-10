@@ -1,18 +1,33 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import WebDriverException
 
 class TestSuitBase:
+    # Use localhost for testing locally outside Docker; otherwise, use 'selenium-hub' inside Docker
+    SELENIUM_GRID_URL = "http://localhost:4444/wd/hub"  # Update to "http://selenium-hub:4444/wd/hub" if running inside Docker
+    RUN_LOCALLY = False  # Toggle to True for local debugging
+
     @staticmethod
     def get_driver() -> webdriver:
         chrome_options = TestSuitBase.get_web_driver_options()
 
-        # Automatically fetch the correct version of chromedriver
-        driver = webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()),  # Automatically gets the right version
-            options=chrome_options
-        )
+        if TestSuitBase.RUN_LOCALLY:
+            print("Running tests locally...")
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
+            except WebDriverException as e:
+                print(f"Error initializing local WebDriver: {e}")
+                raise
+        else:
+            print("Running tests on Selenium Grid...")
+            try:
+                driver = webdriver.Remote(
+                    command_executor=TestSuitBase.SELENIUM_GRID_URL,
+                    options=chrome_options
+                )
+            except WebDriverException as e:
+                print(f"Error connecting to Selenium Grid at {TestSuitBase.SELENIUM_GRID_URL}: {e}")
+                raise
 
         driver.maximize_window()
         return driver
@@ -20,9 +35,11 @@ class TestSuitBase:
     @staticmethod
     def driver_dispose(driver: webdriver = None):
         if driver is not None:
-            driver.close()
-        if driver is not None:
-            driver.quit()
+            try:
+                driver.quit()
+                print("WebDriver session successfully terminated.")
+            except Exception as e:
+                print(f"Error while quitting driver: {e}")
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
@@ -34,4 +51,7 @@ class TestSuitBase:
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-browser-side-navigation')
         options.add_argument('--enable-features=NetworkService,NetworkServiceInProcess')
+        options.add_argument('--window-size=1920,1080')  # Ensure tests run in a consistent viewport size
+        if not TestSuitBase.RUN_LOCALLY:
+            options.add_argument('--headless')  # Headless mode for Grid testing
         return options

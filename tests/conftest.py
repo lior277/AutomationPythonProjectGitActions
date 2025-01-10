@@ -1,14 +1,16 @@
 import pytest
-from tests import test_suit_Base  # Assuming TestSuitBase is in this module
+from tests.test_suit_Base import TestSuitBase  # Assuming TestSuitBase is in this module
 
 @pytest.fixture(scope='function')
-def setup_and_teardown(request):
-    # Setup code here (run before each test)
-    print("Setup: This will run before each test")
-    driver = test_suit_Base.TestSuitBase.get_driver()
-    driver.maximize_window()
-    yield driver
-    print("Teardown: This will run after each test")
+def driver_fixture():
+    """
+    Fixture for setting up and tearing down the WebDriver instance.
+    Provides a WebDriver instance to the test and ensures cleanup after the test.
+    """
+    print("Setup: Initializing WebDriver instance.")
+    driver = TestSuitBase.get_driver()
 
-    if driver:
-        test_suit_Base.TestSuitBase.driver_dispose(driver=driver)
+    yield driver  # This provides the WebDriver instance to the test.
+
+    print("Teardown: Cleaning up WebDriver instance.")
+    TestSuitBase.driver_dispose(driver=driver)
