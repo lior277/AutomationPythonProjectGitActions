@@ -63,7 +63,7 @@ RUN mkdir -p /app/test-results /app/logs && \
     chmod 777 /app/test-results /app/logs
 
 # Create pytest configuration file
-RUN echo "[pytest]\n\
+RUN echo -e "[pytest]\n\
 asyncio_mode = auto\n\
 asyncio_default_fixture_loop_scope = function\n\
 html_report_title = Test Automation Report\n\
@@ -74,7 +74,7 @@ html_report_theme = dark" > /app/pytest.ini
 COPY . /app
 
 # Create entrypoint script
-RUN echo '#!/bin/bash\n\
+RUN echo -e '#!/bin/bash\n\
 set -e\n\
 \n\
 # Ensure test results directory exists\n\
@@ -95,5 +95,5 @@ USER testuser
 # Set working directory
 WORKDIR /app
 
-# Use the entrypoint script as the default command
-CMD ["/app/entrypoint.sh"]
+# Explicitly use the full path to the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
