@@ -34,19 +34,29 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - PYTHONPATH=/app
     container_name: test-runner
     volumes:
-      - .:/app
-      - ./test-results:/app/test-results
+      - .:/app:ro
+      - ./test-results:/app/test-results:rw
+      - /tmp:/tmp:rw
     environment:
       - PYTHONPATH=/app
       - SELENIUM_HUB_HOST=selenium-hub
       - SELENIUM_HUB_PORT=4444
+      - DISPLAY=:99
     depends_on:
-      - selenium-hub
-      - chrome
+      selenium-hub:
+        condition: service_healthy
+      chrome:
+        condition: service_started
     networks:
       - selenium-grid
+    shm_size: 2g
+    restart: on-failure
+    privileged: false
+    read_only: false
 
 networks:
   selenium-grid:

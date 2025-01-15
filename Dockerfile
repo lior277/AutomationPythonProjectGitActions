@@ -73,6 +73,18 @@ html_report_theme = dark" > /app/pytest.ini
 # Copy the rest of the application code
 COPY . /app
 
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Ensure test results directory exists\n\
+mkdir -p /app/test-results\n\
+\n\
+# Run tests with verbose output and generate HTML report\n\
+pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
+' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
 # Create a non-root user
 RUN useradd -m testuser && \
     chown -R testuser:testuser /app
@@ -83,12 +95,5 @@ USER testuser
 # Set working directory
 WORKDIR /app
 
-# Create entrypoint script
-RUN echo '#!/bin/bash\n\
-mkdir -p /app/test-results\n\
-pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
-' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
-
-# Default command
+# Use the entrypoint script as the default command
 CMD ["/app/entrypoint.sh"]
