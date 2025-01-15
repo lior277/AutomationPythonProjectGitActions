@@ -8,6 +8,12 @@ services:
       - "4442:4442"
       - "4443:4443"
       - "4444:4444"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - selenium-grid
 
@@ -27,6 +33,12 @@ services:
       - SE_SCREEN_WIDTH=1920
       - SE_SCREEN_HEIGHT=1080
       - SE_START_XVFB=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://selenium-hub:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - selenium-grid
 
@@ -34,8 +46,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - PYTHONPATH=/app
     container_name: test-runner
     volumes:
       - .:/app:ro
@@ -50,14 +60,13 @@ services:
       selenium-hub:
         condition: service_healthy
       chrome:
-        condition: service_started
+        condition: service_healthy
     networks:
       - selenium-grid
     shm_size: 2g
     restart: on-failure
-    privileged: false
-    read_only: false
 
 networks:
   selenium-grid:
-    external: true
+    name: selenium-grid
+    driver: bridge
