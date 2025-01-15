@@ -2,9 +2,9 @@ name: Selenium Grid Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]  # Added master branch
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]  # Added master branch
   workflow_dispatch:
     inputs:
       test_suite:
@@ -36,55 +36,38 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
 
-    - name: Create test results directory
-      run: mkdir -p test-results
-
-    - name: Create Selenium Grid network
-      run: docker network create selenium-grid
-
-    - name: Build test-runner image
-      run: |
-        docker-compose build test-runner
+    - name: Create network
+      run: docker network create grid
 
     - name: Start Selenium Grid
       run: |
-        docker-compose up -d selenium-event-bus selenium-sessions selenium-session-queue selenium-distributor selenium-router chrome
+        docker-compose up -d
         echo "Waiting for Grid to be ready..."
         sleep 15
 
     - name: Check Grid status
       run: |
+        docker ps -a
         curl -s http://localhost:4444/wd/hub/status || true
-        docker-compose ps
 
-    - name: Run tests with sanity tag
-      if: github.event.inputs.test_suite == 'sanity'
+    - name: Run tests
+      env:
+        PYTHONPATH: ${GITHUB_WORKSPACE}
       run: |
-        docker-compose run --rm test-runner pytest -v -m "sanity" tests/ui/ --html=test-results/report.html
-
-    - name: Run tests with regression tag
-      if: github.event.inputs.test_suite == 'regression'
-      run: |
-        docker-compose run --rm test-runner pytest -v -m "regression" tests/ui/ --html=test-results/report.html
-
-    - name: Run all tests
-      if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == null
-      run: |
-        docker-compose run --rm test-runner pytest -v tests/ui/ --html=test-results/report.html
-
-    - name: Collect test results
-      if: always()
-      run: |
-        mkdir -p artifact-results
-        docker cp test-runner:/app/test-results/. ./artifact-results/ || true
-        docker-compose logs > ./artifact-results/docker-compose.log
+        if [ "${{ github.event.inputs.test_suite }}" = "sanity" ]; then
+          pytest -v -m "sanity" tests/ui/ --html=test-results/report.html
+        elif [ "${{ github.event.inputs.test_suite }}" = "regression" ]; then
+          pytest -v -m "regression" tests/ui/ --html=test-results/report.html
+        else
+          pytest -v tests/ui/ --html=test-results/report.html
+        fi
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: artifact-results
+        path: test-results
 
     - name: Print logs on failure
       if: failure()
