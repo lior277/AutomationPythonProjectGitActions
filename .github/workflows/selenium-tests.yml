@@ -44,22 +44,13 @@ jobs:
         curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-    - name: Create network and start services
+    - name: Start Selenium Grid
       run: |
-        echo "Creating Docker network..."
-        docker network create grid || true
-        
-        echo "Starting Selenium Grid..."
+        docker network create selenium-grid || true
         docker compose up -d selenium-hub chrome
         
-        echo "Waiting for Grid to be ready..."
-        sleep 15
-        
-        echo "Grid status:"
-        curl -s http://localhost:4444/wd/hub/status || true
-        
-        echo "Docker containers:"
-        docker ps -a
+        # Wait for Grid to be ready
+        timeout 60s bash -c 'until curl -s http://localhost:4444/wd/hub/status > /dev/null; do sleep 2; done'
 
     - name: Run tests
       run: |
@@ -80,4 +71,4 @@ jobs:
       if: always()
       run: |
         docker compose down
-        docker network rm grid || true
+        docker network rm selenium-grid || true

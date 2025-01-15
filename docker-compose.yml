@@ -51,4 +51,4 @@ services:
 
 networks:
   selenium-grid:
-    external: true
+    driver: bridge
