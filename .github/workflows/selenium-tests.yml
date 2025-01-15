@@ -34,9 +34,12 @@ jobs:
         curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-    - name: Start Selenium Grid
+    - name: Create Selenium Grid Network
       run: |
         docker network create selenium-grid || true
+
+    - name: Start Selenium Grid
+      run: |
         docker compose up -d selenium-hub chrome
         
         # Wait for Grid to be ready
@@ -47,12 +50,8 @@ jobs:
         mkdir -p test-results
         docker compose run --rm test-runner
 
-    - name: Check Docker Networks
-      run: |
-        docker network ls
-        docker network inspect selenium-grid || true
-
     - name: Upload test results
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: test-results
@@ -62,11 +61,6 @@ jobs:
     - name: Print logs on failure
       if: failure()
       run: docker compose logs
-
-    - name: Create Selenium Grid Network
-      run: |
-        docker network create selenium-grid || true
-        docker compose up -d selenium-hub chrome
 
     - name: Cleanup
       if: always()
