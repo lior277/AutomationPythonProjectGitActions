@@ -2,9 +2,9 @@ name: Selenium Grid Tests
 
 on:
   push:
-    branches: [ main, master ]  # Added master branch
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]  # Added master branch
+    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       test_suite:
@@ -36,43 +36,59 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
 
-    - name: Create network
-      run: docker network create grid
-
-    - name: Start Selenium Grid
+    - name: Setup infrastructure
       run: |
+        echo "Creating Docker network..."
+        docker network create grid || true
+        
+        echo "Starting Selenium Grid..."
         docker-compose up -d
+        
         echo "Waiting for Grid to be ready..."
         sleep 15
-
-    - name: Check Grid status
-      run: |
-        docker ps -a
+        
+        echo "Grid status:"
         curl -s http://localhost:4444/wd/hub/status || true
+        
+        echo "Docker containers:"
+        docker ps -a
 
     - name: Run tests
       env:
         PYTHONPATH: ${GITHUB_WORKSPACE}
       run: |
+        # Echo current directory and its contents
+        pwd
+        ls -la
+        
+        # Run pytest with appropriate markers
         if [ "${{ github.event.inputs.test_suite }}" = "sanity" ]; then
-          pytest -v -m "sanity" tests/ui/ --html=test-results/report.html
+          python -m pytest -v -m "sanity" --capture=no tests/ui/ --html=test-results/report.html
         elif [ "${{ github.event.inputs.test_suite }}" = "regression" ]; then
-          pytest -v -m "regression" tests/ui/ --html=test-results/report.html
+          python -m pytest -v -m "regression" --capture=no tests/ui/ --html=test-results/report.html
         else
-          pytest -v tests/ui/ --html=test-results/report.html
+          python -m pytest -v --capture=no tests/ui/ --html=test-results/report.html
         fi
+
+    - name: Collect test logs
+      if: always()
+      run: |
+        echo "Container logs:"
+        docker-compose logs > test-results/docker.log
+        
+        echo "Test directory contents:"
+        ls -R test-results/
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: test-results
+        path: |
+          test-results/
 
-    - name: Print logs on failure
-      if: failure()
-      run: docker-compose logs
-
-    - name: Stop Selenium Grid
+    - name: Cleanup
       if: always()
-      run: docker-compose down
+      run: |
+        docker-compose down
+        docker network rm grid || true
