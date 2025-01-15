@@ -16,66 +16,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     unzip \
     gnupg \
-    libgconf-2-4 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxdamage1 \
-    libxrandr2 \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libgdk-pixbuf2.0-0 \
-    libnspr4 \
-    libxss1 \
-    libasound2 \
-    libxtst6 \
-    libappindicator3-1 \
-    fonts-liberation \
-    xdg-utils \
-    libvulkan1 \
-    libgbm1 \
-    software-properties-common \
+    bash \  # Explicitly install bash
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install ChromeDriver
-RUN CHROME_MAJOR_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1) \
-    && CHROMEDRIVER_VERSION=$(curl -sS https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_MAJOR_VERSION}) \
-    && wget -q https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip \
-    && unzip chromedriver-linux64.zip \
-    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm -rf chromedriver-linux64.zip chromedriver-linux64
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the entire project first
+COPY . /app
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/test-results /app/logs && \
     chmod 777 /app/test-results /app/logs
 
-# Create pytest configuration file
-RUN echo -e "[pytest]\n\
-asyncio_mode = auto\n\
-asyncio_default_fixture_loop_scope = function\n\
-html_report_title = Test Automation Report\n\
-html_report_template = null\n\
-html_report_theme = dark" > /app/pytest.ini
+# Copy requirements and install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
-COPY . /app
-
-# Create entrypoint script
-RUN echo -e '#!/bin/bash\n\
-set -e\n\
+# Create entrypoint script with verbose debugging
+RUN echo '#!/bin/bash\n\
+set -ex\n\
+\n\
+# Debug information\n\
+pwd\n\
+ls -la /app\n\
 \n\
 # Ensure test results directory exists\n\
 mkdir -p /app/test-results\n\
@@ -83,7 +44,11 @@ mkdir -p /app/test-results\n\
 # Run tests with verbose output and generate HTML report\n\
 pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
 ' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh && \
+    cat /app/entrypoint.sh
+
+# Verify script exists
+RUN ls -l /app/entrypoint.sh
 
 # Create a non-root user
 RUN useradd -m testuser && \
@@ -95,5 +60,5 @@ USER testuser
 # Set working directory
 WORKDIR /app
 
-# Explicitly use the full path to the entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Use CMD instead of ENTRYPOINT to provide more flexibility
+CMD ["/bin/bash", "/app/entrypoint.sh"]

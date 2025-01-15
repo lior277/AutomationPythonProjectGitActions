@@ -34,26 +34,41 @@ jobs:
         curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-    - name: Remove existing Selenium Grid network
+    - name: Clean up existing Docker resources
       run: |
-        docker network rm selenium-grid || true
+        docker system prune -f
+        docker network prune -f
+        docker compose down --remove-orphans || true
 
     - name: Create Selenium Grid Network
       run: |
-        docker network create selenium-grid
+        docker network create selenium-grid || true
 
     - name: Start Selenium Grid
       run: |
-        docker compose down || true  # Ensure any existing containers are stopped
         docker compose up -d selenium-hub chrome
         
-        # Wait for Grid to be ready
-        timeout 90s bash -c '
-          while ! curl -s http://localhost:4444/wd/hub/status > /dev/null; do 
-            echo "Waiting for Selenium Grid to be ready...";
-            sleep 5;
-          done
-        '
+        # Enhanced wait mechanism for Selenium Grid
+        echo "Waiting for Selenium Grid to be ready..."
+        max_attempts=12  # 1 minute total wait time
+        attempt=0
+        
+        while [ $attempt -lt $max_attempts ]; do
+          if curl -s http://localhost:4444/wd/hub/status > /dev/null; then
+            echo "Selenium Grid is ready!"
+            break
+          fi
+          
+          echo "Waiting... (attempt $((attempt+1))/$max_attempts)"
+          sleep 5
+          attempt=$((attempt+1))
+        done
+        
+        if [ $attempt -eq $max_attempts ]; then
+          echo "Selenium Grid failed to start"
+          docker compose logs
+          exit 1
+        fi
 
     - name: Run tests
       run: |
@@ -71,12 +86,29 @@ jobs:
     - name: Print logs on failure
       if: failure()
       run: |
+        echo "Selenium Hub Logs:"
         docker compose logs selenium-hub
+        echo "\nChrome Node Logs:"
         docker compose logs chrome
+        echo "\nTest Runner Logs:"
         docker compose logs test-runner
 
     - name: Cleanup
       if: always()
       run: |
-        docker compose down
+        docker compose down --remove-orphans
         docker network rm selenium-grid || true
+        docker system prune -f
+
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Selenium Grid Test Failure in Workflow',
+            body: `Workflow run ${context.runId} failed. Please check the logs.`
+          })

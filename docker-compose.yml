@@ -42,11 +42,8 @@ services:
       - PYTHONPATH=/app
       - SELENIUM_HUB_HOST=selenium-hub
       - SELENIUM_HUB_PORT=4444
-    depends_on:
-      - selenium-hub
-      - chrome
-    networks:
-      - selenium-grid
+    command: [ "/bin/bash", "/app/entrypoint.sh" ]
+    entrypoint: [ ]
 
 networks:
   selenium-grid:
