@@ -58,23 +58,37 @@ RUN CHROME_MAJOR_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create test results directory with proper permissions
-RUN mkdir -p /app/test-results && chmod 777 /app/test-results
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/test-results /app/logs && \
+    chmod 777 /app/test-results /app/logs
 
 # Create pytest configuration file
 RUN echo "[pytest]\n\
 asyncio_mode = auto\n\
 asyncio_default_fixture_loop_scope = function\n\
-html_report_title = Test Report\n\
+html_report_title = Test Automation Report\n\
 html_report_template = null\n\
 html_report_theme = dark" > /app/pytest.ini
 
 # Copy the rest of the application code
 COPY . /app
 
-# Ensure all necessary directories have correct permissions
-RUN mkdir -p /app/logs && \
-    chmod 777 /app/logs && \
-    chmod 777 /app/test-results
+# Create a non-root user
+RUN useradd -m testuser && \
+    chown -R testuser:testuser /app
 
-# Create a
+# Switch to non-root user
+USER testuser
+
+# Set working directory
+WORKDIR /app
+
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+mkdir -p /app/test-results\n\
+pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
+' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+# Default command
+CMD ["/app/entrypoint.sh"]
