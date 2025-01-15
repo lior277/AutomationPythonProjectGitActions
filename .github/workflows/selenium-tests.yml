@@ -22,64 +22,74 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
+
+    - name: Create test results directory
+      run: mkdir -p test-results
 
     - name: Create Selenium Grid network
       run: docker network create selenium-grid
 
+    - name: Build test-runner image
+      run: |
+        docker-compose build test-runner
+
     - name: Start Selenium Grid
       run: |
-        docker-compose up -d selenium-event-bus selenium-sessions selenium-session-queue selenium-distributor selenium-router chrome-node
-        # Wait for Grid to be ready
-        sleep 10
+        docker-compose up -d selenium-event-bus selenium-sessions selenium-session-queue selenium-distributor selenium-router chrome
+        echo "Waiting for Grid to be ready..."
+        sleep 15
 
     - name: Check Grid status
       run: |
-        curl -s http://localhost:4444/wd/hub/status
+        curl -s http://localhost:4444/wd/hub/status || true
         docker-compose ps
 
-    - name: Run tests
+    - name: Run tests with sanity tag
+      if: github.event.inputs.test_suite == 'sanity'
       run: |
-        if [[ "${{ github.event.inputs.test_suite }}" == "sanity" ]]; then
-          docker-compose run --rm test-runner pytest -v -m sanity tests/ui/
-        elif [[ "${{ github.event.inputs.test_suite }}" == "regression" ]]; then
-          docker-compose run --rm test-runner pytest -v -m regression tests/ui/
-        else
-          docker-compose run --rm test-runner pytest -v tests/ui/
-        fi
+        docker-compose run --rm test-runner pytest -v -m "sanity" tests/ui/ --html=test-results/report.html
 
-    - name: Capture Docker logs on failure
-      if: failure()
+    - name: Run tests with regression tag
+      if: github.event.inputs.test_suite == 'regression'
       run: |
-        docker-compose logs selenium-router
-        docker-compose logs chrome-node
-        docker-compose logs test-runner
+        docker-compose run --rm test-runner pytest -v -m "regression" tests/ui/ --html=test-results/report.html
+
+    - name: Run all tests
+      if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == null
+      run: |
+        docker-compose run --rm test-runner pytest -v tests/ui/ --html=test-results/report.html
 
     - name: Collect test results
       if: always()
       run: |
-        mkdir -p test-results
-        docker cp test-runner:/app/test-results/. ./test-results/
-        docker cp test-runner:/app/error_screenshot.png ./test-results/ || true
+        mkdir -p artifact-results
+        docker cp test-runner:/app/test-results/. ./artifact-results/ || true
+        docker-compose logs > ./artifact-results/docker-compose.log
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: |
-          test-results/
-          
+        path: artifact-results
+
+    - name: Print logs on failure
+      if: failure()
+      run: docker-compose logs
+
     - name: Stop Selenium Grid
       if: always()
       run: docker-compose down
