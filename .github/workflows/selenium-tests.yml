@@ -6,16 +6,6 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      test_suite:
-        description: 'Test suite to run'
-        required: true
-        default: 'sanity'
-        type: choice
-        options:
-          - sanity
-          - regression
-          - all
 
 jobs:
   test:
@@ -54,7 +44,7 @@ jobs:
 
     - name: Run tests
       run: |
-        docker compose run --rm test-runner pytest -v tests/ui/ --html=test-results/report.html
+        docker compose run --rm test-runner
 
     - name: Upload test results
       if: always()
