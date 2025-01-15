@@ -11,13 +11,14 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK 1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     curl \
     wget \
     unzip \
     gnupg \
-    bash \  # Explicitly install bash
-    && rm -rf /var/lib/apt/lists/*
+    bash && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the entire project first
 COPY . /app
@@ -30,13 +31,9 @@ RUN mkdir -p /app/test-results /app/logs && \
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create entrypoint script with verbose debugging
+# Create entrypoint script
 RUN echo '#!/bin/bash\n\
-set -ex\n\
-\n\
-# Debug information\n\
-pwd\n\
-ls -la /app\n\
+set -e\n\
 \n\
 # Ensure test results directory exists\n\
 mkdir -p /app/test-results\n\
@@ -44,11 +41,7 @@ mkdir -p /app/test-results\n\
 # Run tests with verbose output and generate HTML report\n\
 pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
 ' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh && \
-    cat /app/entrypoint.sh
-
-# Verify script exists
-RUN ls -l /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh
 
 # Create a non-root user
 RUN useradd -m testuser && \
@@ -60,5 +53,5 @@ USER testuser
 # Set working directory
 WORKDIR /app
 
-# Use CMD instead of ENTRYPOINT to provide more flexibility
+# Default command
 CMD ["/bin/bash", "/app/entrypoint.sh"]
