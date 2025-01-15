@@ -37,21 +37,20 @@ jobs:
         pip install -r requirements.txt
         mkdir -p test-results
 
-    - name: Install Docker Compose
+    - name: Set up Docker Compose
       run: |
         DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
         mkdir -p $DOCKER_CONFIG/cli-plugins
         curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
-        docker compose version
 
-    - name: Setup infrastructure
+    - name: Create network and start services
       run: |
         echo "Creating Docker network..."
         docker network create grid || true
         
         echo "Starting Selenium Grid..."
-        docker compose up -d
+        docker compose up -d selenium-hub chrome
         
         echo "Waiting for Grid to be ready..."
         sleep 15
@@ -62,26 +61,20 @@ jobs:
         echo "Docker containers:"
         docker ps -a
 
-    - name: Run tests in Docker
+    - name: Run tests
       run: |
-        docker compose run --rm -e PYTHONPATH=/app chrome pytest -v tests/ui/ --html=test-results/report.html
-
-    - name: Collect test logs
-      if: always()
-      run: |
-        echo "Container logs:"
-        docker compose logs > test-results/docker.log
-        
-        echo "Test directory contents:"
-        ls -R test-results/ || true
+        docker compose run --rm test-runner pytest -v tests/ui/ --html=test-results/report.html
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: |
-          test-results/
+        path: test-results
+
+    - name: Print logs on failure
+      if: failure()
+      run: docker compose logs
 
     - name: Cleanup
       if: always()
