@@ -47,6 +47,11 @@ jobs:
         mkdir -p test-results
         docker compose run --rm test-runner
 
+    - name: Check Docker Networks
+      run: |
+        docker network ls
+        docker network inspect selenium-grid || true
+
     - name: Upload test results
       uses: actions/upload-artifact@v3
       with:
@@ -57,6 +62,11 @@ jobs:
     - name: Print logs on failure
       if: failure()
       run: docker compose logs
+
+    - name: Create Selenium Grid Network
+      run: |
+        docker network create selenium-grid || true
+        docker compose up -d selenium-hub chrome
 
     - name: Cleanup
       if: always()

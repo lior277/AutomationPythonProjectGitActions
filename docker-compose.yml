@@ -63,5 +63,5 @@ services:
 
 networks:
   selenium-grid:
+    name: selenium-grid
     driver: bridge
-    name: selenium-grid-network
