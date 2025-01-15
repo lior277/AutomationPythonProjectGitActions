@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  selenium-hub:
+  selenium-hub:  # Ensure this is the exact service name
     image: selenium/hub:4.27.0-20250101
     container_name: selenium-hub
     ports:
@@ -18,7 +18,7 @@ services:
     depends_on:
       - selenium-hub
     environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_HOST=selenium-hub  # Use the service name here
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
       - SE_NODE_MAX_INSTANCES=1
@@ -27,25 +27,6 @@ services:
       - SE_SCREEN_WIDTH=1920
       - SE_SCREEN_HEIGHT=1080
       - SE_START_XVFB=true
-    networks:
-      - selenium-grid
-
-  test-runner:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: test-runner
-    shm_size: 2gb
-    volumes:
-      - .:/app
-      - ./test-results:/app/test-results
-    environment:
-      - PYTHONPATH=/app
-      - SELENIUM_HUB_HOST=selenium-hub
-      - SELENIUM_HUB_PORT=4444
-    depends_on:
-      - selenium-hub
-      - chrome
     networks:
       - selenium-grid
 
