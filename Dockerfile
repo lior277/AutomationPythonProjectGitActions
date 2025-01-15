@@ -58,19 +58,23 @@ RUN CHROME_MAJOR_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create test results directory with proper permissions
+RUN mkdir -p /app/test-results && chmod 777 /app/test-results
+
+# Create pytest configuration file
+RUN echo "[pytest]\n\
+asyncio_mode = auto\n\
+asyncio_default_fixture_loop_scope = function\n\
+html_report_title = Test Report\n\
+html_report_template = null\n\
+html_report_theme = dark" > /app/pytest.ini
+
 # Copy the rest of the application code
 COPY . /app
 
-# Create a non-root user and switch to it
-RUN useradd -m testuser
-USER testuser
+# Ensure all necessary directories have correct permissions
+RUN mkdir -p /app/logs && \
+    chmod 777 /app/logs && \
+    chmod 777 /app/test-results
 
-# Set up working directory for the non-root user
-WORKDIR /app
-
-# Add health check
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD pytest tests/healthcheck.py || exit 1
-
-# Default command to run tests
-CMD ["pytest", "-v", "tests/ui/", "--html=test-results/report.html"]
+# Create a

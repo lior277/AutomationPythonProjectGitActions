@@ -1,45 +1,85 @@
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.remote.remote_connection import RemoteConnection
+import logging
 
 
-class TestSuitBase:
-    SELENIUM_GRID_URL = "http://selenium-router:4444/wd/hub"
+class TestSuiteBase:
+    SELENIUM_GRID_URL = "http://selenium-hub:4444/wd/hub"  # Updated from selenium-router
     RUN_LOCALLY = False
 
-    @staticmethod
-    def get_driver() -> webdriver:
-        chrome_options = TestSuitBase.get_web_driver_options()
+    @classmethod
+    def get_driver(cls) -> webdriver:
+        """
+        Create and return a Selenium WebDriver instance.
 
-        print("Running tests on Selenium Grid...")
+        Returns:
+            webdriver: Configured WebDriver instance
+
+        Raises:
+            WebDriverException: If unable to connect to Selenium Grid
+        """
+        chrome_options = cls.get_web_driver_options()
+
+        logging.info("Attempting to connect to Selenium Grid...")
         try:
-            # Set capabilities through ChromeOptions
-            chrome_options.set_capability('browserName', 'chrome')
-            chrome_options.set_capability('platformName', 'linux')
-            chrome_options.set_capability('se:noVnc', True)
-            chrome_options.set_capability('se:vncEnabled', True)
+            # Create RemoteConnection for more robust connection
+            remote_connection = RemoteConnection(cls.SELENIUM_GRID_URL)
 
+            # Comprehensive capabilities configuration
+            capabilities = {
+                'browserName': 'chrome',
+                'platformName': 'linux',
+                'se:noVNC': True,
+                'se:vncEnabled': True,
+                'goog:chromeOptions': {
+                    'args': chrome_options.arguments,
+                    'excludeSwitches': ['enable-logging']
+                }
+            }
+
+            # Create Remote WebDriver with explicit capabilities
             driver = webdriver.Remote(
-                command_executor=TestSuitBase.SELENIUM_GRID_URL,
-                options=chrome_options
+                command_executor=remote_connection,
+                options=chrome_options,
+                desired_capabilities=capabilities
             )
-            print(f"Successfully connected to Selenium Grid at {TestSuitBase.SELENIUM_GRID_URL}")
+
+            # Additional driver configuration
+            driver.set_page_load_timeout(30)
+            driver.implicitly_wait(10)
+
+            logging.info(f"Successfully connected to Selenium Grid at {cls.SELENIUM_GRID_URL}")
             return driver
+
         except WebDriverException as e:
-            print(f"Error connecting to Selenium Grid at {TestSuitBase.SELENIUM_GRID_URL}: {e}")
+            logging.error(f"Error connecting to Selenium Grid at {cls.SELENIUM_GRID_URL}: {e}")
             raise
 
-    @staticmethod
-    def driver_dispose(driver: webdriver = None):
+    @classmethod
+    def driver_dispose(cls, driver: webdriver = None):
+        """
+        Safely quit the WebDriver session.
+
+        Args:
+            driver (webdriver, optional): WebDriver instance to quit
+        """
         if driver is not None:
             try:
                 driver.quit()
-                print("WebDriver session successfully terminated.")
+                logging.info("WebDriver session successfully terminated.")
             except Exception as e:
-                print(f"Error while quitting driver: {e}")
+                logging.error(f"Error while quitting driver: {e}")
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
+        """
+        Configure and return Chrome WebDriver options.
+
+        Returns:
+            ChromeOptions: Configured Chrome options
+        """
         options = ChromeOptions()
 
         # Required for running in container
@@ -54,10 +94,24 @@ class TestSuitBase:
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=en-GB')
 
-        # Additional stability options
+        # Additional stability and performance options
         options.add_argument('--disable-extensions')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
         options.add_argument('--disable-web-security')
 
+        # Performance and logging options
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-software-rasterizer')
+
+        # Logging configuration
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
         return options
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
