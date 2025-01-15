@@ -1,4 +1,7 @@
+from time import sleep
+
 import pytest
+
 from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
 from Infrastructure.objects.objects_api.episode_page_api import EpisodePageApi
 from Infrastructure.objects.objects_ui.google_home_page_ui import GoogleHomePageUi
@@ -8,6 +11,7 @@ from Infrastructure.objects.objects_ui.google_home_page_ui import GoogleHomePage
 class TestVerifyCharacterLocation:
     """Test class to verify character locations."""
 
+    @pytest.mark.regression
     async def test_verify_characters_location_is_the_same_ui(self, driver_fixture):
         """Verify that two randomly selected characters have the same location."""
         driver = driver_fixture
@@ -26,6 +30,7 @@ class TestVerifyCharacterLocation:
         driver.get(DataRep.google_home_page_url)
         google_home_page = GoogleHomePageUi(driver)
         google_search_image_page = google_home_page.click_on_images_link()
+        sleep(1)
         google_search_image_page.set_image_name(character_1_name)
         google_images_page = google_search_image_page.click_on_search_images_button()
 

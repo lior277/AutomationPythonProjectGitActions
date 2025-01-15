@@ -1,12 +1,10 @@
-from time import sleep
 from typing import Any, List
 
+from selenium import webdriver
 from selenium.common import StaleElementReferenceException, NoSuchElementException, ElementNotInteractableException, \
     ElementNotVisibleException, ElementNotSelectableException, InvalidSelectorException, NoSuchFrameException, \
     WebDriverException
-from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.remote.webelement import WebElement
 
 from Infrastructure.Infra.dal.string_extentions.string_extentions import is_null_or_empty
 

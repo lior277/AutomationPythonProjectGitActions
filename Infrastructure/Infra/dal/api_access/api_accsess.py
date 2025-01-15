@@ -1,5 +1,5 @@
 import aiohttp
-import asyncio
+
 
 class ApiAccess:
     @staticmethod

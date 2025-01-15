@@ -1,0 +1,85 @@
+name: Selenium Grid Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'sanity'
+        type: choice
+        options:
+          - sanity
+          - regression
+          - all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create Selenium Grid network
+      run: docker network create selenium-grid
+
+    - name: Start Selenium Grid
+      run: |
+        docker-compose up -d selenium-event-bus selenium-sessions selenium-session-queue selenium-distributor selenium-router chrome-node
+        # Wait for Grid to be ready
+        sleep 10
+
+    - name: Check Grid status
+      run: |
+        curl -s http://localhost:4444/wd/hub/status
+        docker-compose ps
+
+    - name: Run tests
+      run: |
+        if [[ "${{ github.event.inputs.test_suite }}" == "sanity" ]]; then
+          docker-compose run --rm test-runner pytest -v -m sanity tests/ui/
+        elif [[ "${{ github.event.inputs.test_suite }}" == "regression" ]]; then
+          docker-compose run --rm test-runner pytest -v -m regression tests/ui/
+        else
+          docker-compose run --rm test-runner pytest -v tests/ui/
+        fi
+
+    - name: Capture Docker logs on failure
+      if: failure()
+      run: |
+        docker-compose logs selenium-router
+        docker-compose logs chrome-node
+        docker-compose logs test-runner
+
+    - name: Collect test results
+      if: always()
+      run: |
+        mkdir -p test-results
+        docker cp test-runner:/app/test-results/. ./test-results/
+        docker cp test-runner:/app/error_screenshot.png ./test-results/ || true
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          test-results/
+          
+    - name: Stop Selenium Grid
+      if: always()
+      run: docker-compose down

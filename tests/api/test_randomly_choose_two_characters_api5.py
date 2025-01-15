@@ -1,6 +1,5 @@
 import pytest
 
-from Infrastructure.Infra.utils.assert_all import AssertAll
 from Infrastructure.objects.data_classes.character import Character
 from Infrastructure.objects.objects_api.episode_page_api import EpisodePageApi
 

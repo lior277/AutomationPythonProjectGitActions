@@ -1,11 +1,12 @@
-import random
 import asyncio
+import random
 from typing import List
 
+from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
 from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
 from Infrastructure.objects.data_classes.character import Character
 from Infrastructure.objects.data_classes.episode_response import EpisodeResponse, Episode
-from Infrastructure.Infra.dal.api_access.api_accsess import ApiAccess
+
 
 class EpisodePageApi:
 

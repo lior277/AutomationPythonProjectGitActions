@@ -1,10 +1,10 @@
 from datetime import datetime
+
 from PIL import Image
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.common.by import By
 
 from Infrastructure.Infra.dal.web_driver_extention.web_driver_extension import DriverEX
-
 
 
 class GoogleImagesPageUi:
