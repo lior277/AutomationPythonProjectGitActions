@@ -27,17 +27,21 @@ RUN apt-get update && \
 # Create necessary directories and set permissions
 RUN mkdir -p /app/test-results /app/logs && \
     chown -R testuser:testuser /app && \
-    chmod 777 /app/test-results /app/logs
+    chmod -R 777 /app  # Give full permissions to all files and directories
 
 # Copy requirements first to leverage Docker cache
 COPY --chown=testuser:testuser requirements.txt /app/
+
+# Install Python packages as root to avoid permission issues
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create and set permissions for the entrypoint script first
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
+# Ensure test results directory exists and has correct permissions\n\
 mkdir -p /app/test-results\n\
+chmod -R 777 /app/test-results\n\
 \n\
 cd /app\n\
 python -m pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
@@ -47,6 +51,9 @@ python -m pytest -v --html=/app/test-results/report.html --self-contained-html t
 
 # Copy the project files with correct ownership
 COPY --chown=testuser:testuser . /app/
+
+# Make sure all files are accessible
+RUN chmod -R 777 /app
 
 # Switch to non-root user
 USER testuser

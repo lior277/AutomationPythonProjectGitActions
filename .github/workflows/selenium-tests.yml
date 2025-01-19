@@ -113,7 +113,7 @@ jobs:
         text: 'Workflow failed!'
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # Changed from SLACK_WEBHOOK to SLACK_WEBHOOK_URL
 
     - name: Cleanup
       if: always()

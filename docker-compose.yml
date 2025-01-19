@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./test-results:/app/test-results
+      - ./test-results:/app/test-results:rw  # Added explicit read-write permission
     depends_on:
       - chrome
       - selenium-hub
