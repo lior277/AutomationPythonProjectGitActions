@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PIP_NO_CACHE_DIR 1
 ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+ENV PYTHONPATH=/app
 
 # Set the working directory in the container
 WORKDIR /app
@@ -29,9 +30,9 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the project
-COPY . /app
+COPY . /app/
 
-# Create entrypoint script using RUN command with shell
+# Create entrypoint script
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
@@ -39,11 +40,11 @@ set -e\n\
 mkdir -p /app/test-results\n\
 \n\
 # Run tests with verbose output and generate HTML report\n\
-pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
+python -m pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
 ' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
-# Create a non-root user and set permissions
+# Create a non-root user and set proper permissions
 RUN useradd -m testuser && \
     chown -R testuser:testuser /app && \
     chmod +x /app/entrypoint.sh
@@ -51,8 +52,8 @@ RUN useradd -m testuser && \
 # Switch to non-root user
 USER testuser
 
-# Set working directory
+# Set working directory again to ensure proper permissions
 WORKDIR /app
 
-# Use ENTRYPOINT instead of CMD for more reliable script execution
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Use ENTRYPOINT to ensure script is executed
+ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
