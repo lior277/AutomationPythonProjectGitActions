@@ -20,19 +20,19 @@ RUN apt-get update && \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the entire project first
-COPY . /app
-
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/test-results /app/logs && \
     chmod 777 /app/test-results /app/logs
 
-# Copy requirements and install Python dependencies
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the project
+COPY . /app
+
 # Create entrypoint script using RUN command with shell
-RUN printf '#!/bin/bash\n\
+RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Ensure test results directory exists\n\
@@ -41,15 +41,12 @@ mkdir -p /app/test-results\n\
 # Run tests with verbose output and generate HTML report\n\
 pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
 ' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh && \
-    cat /app/entrypoint.sh  # Print the script to verify its contents
+    chmod +x /app/entrypoint.sh
 
-# Verify the script exists
-RUN ls -l /app/entrypoint.sh
-
-# Create a non-root user
+# Create a non-root user and set permissions
 RUN useradd -m testuser && \
-    chown -R testuser:testuser /app
+    chown -R testuser:testuser /app && \
+    chmod +x /app/entrypoint.sh
 
 # Switch to non-root user
 USER testuser
@@ -57,5 +54,5 @@ USER testuser
 # Set working directory
 WORKDIR /app
 
-# Default command
-CMD ["/bin/bash", "/app/entrypoint.sh"]
+# Use ENTRYPOINT instead of CMD for more reliable script execution
+ENTRYPOINT ["/app/entrypoint.sh"]
