@@ -8,15 +8,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # Changed to write to allow pushing updates
+  contents: write
+  pull-requests: write
   issues: write
-  actions: read
+  repository-projects: write
 
 jobs:
   update-dependencies:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.PAT_TOKEN }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -34,7 +37,7 @@ jobs:
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PAT_TOKEN }}
         commit-message: "chore: update dependencies"
         title: "chore: update Python dependencies"
         body: |
@@ -48,8 +51,107 @@ jobs:
     needs: update-dependencies
     runs-on: ubuntu-latest
     steps:
-    # Your existing test steps here
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Rest of your existing workflow...
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+
+    - name: Set up Docker Compose
+      run: |
+        DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+        mkdir -p $DOCKER_CONFIG/cli-plugins
+        curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+        chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+
+    - name: Clean up existing Docker resources
+      run: docker compose down --volumes --remove-orphans || true
+
+    - name: Setup test directory
+      run: |
+        mkdir -p test-results
+        sudo chown -R 1000:1000 test-results
+        sudo chmod 777 test-results
+
+    - name: Create Selenium Grid Network
+      run: docker network create selenium-grid || true
+
+    - name: Start Selenium Grid
+      run: |
+        docker compose up -d selenium-hub chrome
+        
+        echo "Waiting for Selenium Grid to be ready..."
+        timeout=180
+        start_time=$(date +%s)
+        
+        while true; do
+          if curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true"; then
+            echo "Selenium Grid is ready!"
+            break
+          fi
+        
+          current_time=$(date +%s)
+          elapsed=$((current_time - start_time))
+        
+          if [ $elapsed -ge $timeout ]; then
+            echo "Timeout waiting for Selenium Grid"
+            docker compose logs
+            exit 1
+          fi
+        
+          echo "Still waiting... ($elapsed seconds elapsed)"
+          sleep 5
+        done
+
+    - name: Run tests
+      run: |
+        # Run tests with proper user mapping
+        docker compose run --rm \
+          -u testuser \
+          test-runner || {
+            echo "Tests failed"
+            docker compose logs
+            exit 1
+          }
+
+    - name: Print logs on failure
+      if: failure()
+      run: |
+        echo "Selenium Hub Logs:"
+        docker compose logs selenium-hub
+        echo -e "\nChrome Node Logs:"
+        docker compose logs chrome
+        echo -e "\nTest Runner Logs:"
+        docker compose logs test-runner
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results/
+        retention-days: 30
+
+    - name: Slack Notification
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: 'Workflow failed!'
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker compose down --volumes --remove-orphans
+        docker network rm selenium-grid || true
