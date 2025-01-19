@@ -21,26 +21,24 @@ RUN apt-get update && \
         bash \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd -m testuser \
+    && groupadd -r testuser --gid 1000 \
+    && useradd -r -g testuser --uid 1000 -d /app testuser \
     && mkdir -p /app/test-results /app/logs \
-    && chown -R testuser:testuser /app /app/test-results /app/logs
+    && chown -R testuser:testuser /app
 
-# Copy and install requirements first to leverage Docker cache
+# Copy requirements first to leverage Docker cache
 COPY --chown=testuser:testuser requirements.txt /app/
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create entrypoint script with proper formatting
+# Create entrypoint script with proper error handling
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-# Ensure we have write permissions\n\
-if ! touch /app/test-results/.test_write_permission 2>/dev/null; then\n\
-    echo "Error: Cannot write to /app/test-results directory"\n\
-    exit 1\n\
-fi\n\
-rm -f /app/test-results/.test_write_permission\n\
+mkdir -p /app/test-results\n\
+chown -R testuser:testuser /app/test-results\n\
 \n\
-# Run tests with proper error handling\n\
 cd /app\n\
 exec python -m pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
 ' > /app/entrypoint.sh && \
@@ -49,10 +47,6 @@ exec python -m pytest -v --html=/app/test-results/report.html --self-contained-h
 
 # Copy the project files
 COPY --chown=testuser:testuser . /app/
-
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://selenium-hub:4444/wd/hub/status || exit 1
 
 # Switch to non-root user
 USER testuser

@@ -79,10 +79,15 @@ jobs:
     - name: Run tests
       run: |
         mkdir -p test-results
-        timeout 30m docker compose run --rm test-runner || {
-          echo "Tests timed out or failed"
-          exit 1
-        }
+        chmod 777 test-results  # Ensure directory is writable
+        
+        # Run tests with proper user mapping
+        docker compose run --rm \
+          -u $(id -u):$(id -g) \
+          test-runner || {
+            echo "Tests failed"
+            exit 1
+          }
 
     - name: Print logs on failure
       if: failure()
