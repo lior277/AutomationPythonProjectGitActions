@@ -53,47 +53,36 @@ jobs:
       run: |
         docker compose up -d selenium-hub chrome
         
-        # Enhanced wait mechanism for Selenium Grid
         echo "Waiting for Selenium Grid to be ready..."
-        max_attempts=20
-        attempt=0
+        timeout=180
+        start_time=$(date +%s)
         
-        while [ $attempt -lt $max_attempts ]; do
-          if curl -s http://localhost:4444/wd/hub/status > /dev/null; then
+        while true; do
+          if curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true"; then
             echo "Selenium Grid is ready!"
             break
           fi
-          
-          echo "Waiting... (attempt $((attempt+1))/$max_attempts)"
-          sleep 10
-          attempt=$((attempt+1))
-        done
         
-        if [ $attempt -eq $max_attempts ]; then
-          echo "Selenium Grid failed to start"
-          docker compose logs
-          exit 1
-        fi
+          current_time=$(date +%s)
+          elapsed=$((current_time - start_time))
+        
+          if [ $elapsed -ge $timeout ]; then
+            echo "Timeout waiting for Selenium Grid"
+            docker compose logs
+            exit 1
+          fi
+        
+          echo "Still waiting... ($elapsed seconds elapsed)"
+          sleep 5
+        done
 
     - name: Run tests
       run: |
         mkdir -p test-results
-
-        # Print Dockerfile contents for debugging
-        echo "Dockerfile contents:"
-        cat Dockerfile
-
-        # Build with verbose output
-        docker compose build test-runner
-
-        # List contents of the test-runner container
-        docker compose run --rm test-runner ls -la /app
-
-        # Run tests
-        docker compose run --rm test-runner || true
-
-        # Check test results directory
-        ls -la test-results
+        timeout 30m docker compose run --rm test-runner || {
+          echo "Tests timed out or failed"
+          exit 1
+        }
 
     - name: Print logs on failure
       if: failure()
@@ -115,9 +104,5 @@ jobs:
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # Changed from SLACK_WEBHOOK to SLACK_WEBHOOK_URL
 
-    - name: Cleanup
-      if: always()
-      run: |
-        docker compose down --remove-orphans
-        docker network rm selenium-grid || true
-        docker system prune -af
+    - name: Clean up existing Docker resources
+      run: docker compose down --volumes --remove-orphans || true

@@ -3,13 +3,22 @@ version: '3'
 services:
   selenium-hub:
     image: selenium/hub:4.27.0-20250101
+    container_name: selenium-hub
     ports:
       - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
     networks:
       - selenium-grid
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   chrome:
     image: selenium/node-chrome:4.27.0-20250101
+    shm_size: '2g'
     depends_on:
       - selenium-hub
     environment:
@@ -18,13 +27,22 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     networks:
       - selenium-grid
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://selenium-hub:4444/wd/hub/status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   test-runner:
     build:
       context: .
       dockerfile: Dockerfile
+    user: testuser
     volumes:
-      - ./test-results:/app/test-results:rw  # Added explicit read-write permission
+      - type: bind
+        source: ./test-results
+        target: /app/test-results
+        consistency: consistent
     depends_on:
       - chrome
       - selenium-hub
