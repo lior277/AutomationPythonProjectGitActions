@@ -45,7 +45,7 @@ class TestVerifyCharacterLocation:
         driver.get(character_2_image_url)
 
         # Compare locations
-        if character_1_location != character_2_location:
+        if character_1_location == character_2_location:
             print(f"Character 1 location: {character_1_location} ({character_1_name}) vs "
                   f"Character 2 location: {character_2_location} ({character_2_name}).")
         else:
