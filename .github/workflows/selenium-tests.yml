@@ -30,7 +30,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
-        mkdir -p test-results
 
     - name: Set up Docker Compose
       run: |
@@ -40,14 +39,16 @@ jobs:
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
     - name: Clean up existing Docker resources
+      run: docker compose down --volumes --remove-orphans || true
+
+    - name: Setup test directory
       run: |
-        docker system prune -af
-        docker network prune -f
-        docker compose down --remove-orphans || true
+        mkdir -p test-results
+        sudo chown -R 1000:1000 test-results
+        sudo chmod 777 test-results
 
     - name: Create Selenium Grid Network
-      run: |
-        docker network create selenium-grid || true
+      run: docker network create selenium-grid || true
 
     - name: Start Selenium Grid
       run: |
@@ -78,14 +79,12 @@ jobs:
 
     - name: Run tests
       run: |
-        mkdir -p test-results
-        chmod 777 test-results  # Ensure directory is writable
-        
         # Run tests with proper user mapping
         docker compose run --rm \
-          -u $(id -u):$(id -g) \
+          -u testuser \
           test-runner || {
             echo "Tests failed"
+            docker compose logs
             exit 1
           }
 
@@ -97,7 +96,15 @@ jobs:
         echo -e "\nChrome Node Logs:"
         docker compose logs chrome
         echo -e "\nTest Runner Logs:"
-        docker compose logs test-runner 
+        docker compose logs test-runner
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results/
+        retention-days: 30
 
     - name: Slack Notification
       if: failure()
@@ -107,7 +114,10 @@ jobs:
         text: 'Workflow failed!'
         fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # Changed from SLACK_WEBHOOK to SLACK_WEBHOOK_URL
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    - name: Clean up existing Docker resources
-      run: docker compose down --volumes --remove-orphans || true
+    - name: Cleanup
+      if: always()
+      run: |
+        docker compose down --volumes --remove-orphans
+        docker network rm selenium-grid || true

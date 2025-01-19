@@ -10,11 +10,6 @@ services:
       - "4443:4443"
     networks:
       - selenium-grid
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
   chrome:
     image: selenium/node-chrome:4.27.0-20250101
@@ -27,22 +22,15 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     networks:
       - selenium-grid
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://selenium-hub:4444/wd/hub/status" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
   test-runner:
     build:
       context: .
       dockerfile: Dockerfile
-    user: "${UID:-1000}:${GID:-1000}"  # Use host user ID
     volumes:
-      - type: bind
-        source: ./test-results
-        target: /app/test-results
-        consistency: consistent
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONUNBUFFERED=1
     depends_on:
       - chrome
       - selenium-hub

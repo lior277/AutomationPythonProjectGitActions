@@ -21,23 +21,22 @@ RUN apt-get update && \
         bash \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r testuser --gid 1000 \
-    && useradd -r -g testuser --uid 1000 -d /app testuser \
+    && useradd -m testuser \
     && mkdir -p /app/test-results /app/logs \
-    && chown -R testuser:testuser /app
+    && chown -R testuser:testuser /app /app/test-results /app/logs
 
 # Copy requirements first to leverage Docker cache
-COPY --chown=testuser:testuser requirements.txt /app/
-
-# Install Python dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create entrypoint script with proper error handling
+# Create entrypoint script
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
+# Ensure test-results directory exists and is writable\n\
 mkdir -p /app/test-results\n\
 chown -R testuser:testuser /app/test-results\n\
+chmod 777 /app/test-results\n\
 \n\
 cd /app\n\
 exec python -m pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
@@ -47,6 +46,9 @@ exec python -m pytest -v --html=/app/test-results/report.html --self-contained-h
 
 # Copy the project files
 COPY --chown=testuser:testuser . /app/
+
+# Give ownership to testuser
+RUN chown -R testuser:testuser /app
 
 # Switch to non-root user
 USER testuser
