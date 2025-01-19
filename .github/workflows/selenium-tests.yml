@@ -103,7 +103,7 @@ jobs:
         echo -e "\nChrome Node Logs:"
         docker compose logs chrome
         echo -e "\nTest Runner Logs:"
-        docker compose logs test-runner
+        docker compose logs test-runner 
 
     - name: Slack Notification
       if: failure()
