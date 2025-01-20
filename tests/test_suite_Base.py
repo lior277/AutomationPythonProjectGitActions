@@ -1,6 +1,8 @@
 import sys
 import traceback
 import os
+import shutil
+import subprocess
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -22,6 +24,9 @@ class TestSuiteBase:
 
         if cls.RUN_LOCALLY:
             try:
+                # Install Chrome and ChromeDriver if not present
+                cls._ensure_chrome_installed()
+
                 # Standard ChromeDriverManager installation
                 driver_path = ChromeDriverManager().install()
 
@@ -33,6 +38,9 @@ class TestSuiteBase:
                     log_path='chromedriver.log'  # Detailed ChromeDriver logs
                 )
 
+                # Additional pre-launch checks
+                cls._verify_chrome_compatibility(driver_path)
+
                 driver = webdriver.Chrome(service=service, options=chrome_options)
 
                 # Additional driver verification
@@ -42,7 +50,7 @@ class TestSuiteBase:
                 logging.info("Successfully created local Chrome WebDriver")
                 return driver
 
-            except WebDriverException as e:
+            except Exception as e:
                 # Comprehensive error logging
                 logging.error(f"WebDriver Exception: {e}")
                 logging.error(f"Detailed traceback: {traceback.format_exc()}")
@@ -60,17 +68,13 @@ class TestSuiteBase:
                 logging.info(f"ChromeDriver path: {driver_path}")
 
                 # Check system environment
-                try:
-                    import shutil
-                    chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
-                    logging.info(f"Chrome executable path: {chrome_path}")
-                except Exception:
-                    logging.error("Could not find Chrome executable")
+                chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
+                logging.info(f"Chrome executable path: {chrome_path}")
 
                 raise
 
         else:
-            # Grid execution code
+            # Grid execution code (remains the same)
             logging.info("Attempting to connect to Selenium Grid...")
             try:
                 remote_connection = RemoteConnection(cls.SELENIUM_GRID_URL)
@@ -102,6 +106,36 @@ class TestSuiteBase:
                 logging.error(f"Error connecting to Selenium Grid at {cls.SELENIUM_GRID_URL}: {e}")
                 logging.error(f"Detailed traceback: {traceback.format_exc()}")
                 raise
+
+    @classmethod
+    def _ensure_chrome_installed(cls):
+        """Ensure Chrome browser is installed."""
+        try:
+            subprocess.run(['which', 'google-chrome'], check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            logging.info("Chrome not found. Attempting to install...")
+            try:
+                subprocess.run([
+                    'wget', 'https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb',
+                    '-O', '/tmp/chrome.deb'
+                ], check=True)
+                subprocess.run(['sudo', 'dpkg', '-i', '/tmp/chrome.deb'], check=True)
+                subprocess.run(['sudo', 'apt-get', 'install', '-f', '-y'], check=True)
+            except Exception as e:
+                logging.error(f"Failed to install Chrome: {e}")
+                raise
+
+    @classmethod
+    def _verify_chrome_compatibility(cls, driver_path):
+        """Verify ChromeDriver and Chrome compatibility."""
+        try:
+            chrome_version_output = subprocess.check_output(['google-chrome', '--version']).decode().strip()
+            chromedriver_version_output = subprocess.check_output([driver_path, '--version']).decode().strip()
+
+            logging.info(f"Chrome Version: {chrome_version_output}")
+            logging.info(f"ChromeDriver Version: {chromedriver_version_output}")
+        except Exception as e:
+            logging.error(f"Version compatibility check failed: {e}")
 
     @classmethod
     def driver_dispose(cls, driver: webdriver = None):

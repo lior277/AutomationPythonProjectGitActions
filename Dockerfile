@@ -39,7 +39,11 @@ chown -R testuser:testuser /app/test-results\n\
 chmod 777 /app/test-results\n\
 \n\
 cd /app\n\
-exec python -m pytest -v --html=/app/test-results/report.html --self-contained-html tests/ui/\n\
+exec python -m pytest -v \
+    --html=/app/test-results/report.html \
+    --self-contained-html \
+    --log-cli-level=INFO \
+    tests/ui/\n\
 ' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh && \
     chown testuser:testuser /app/entrypoint.sh
