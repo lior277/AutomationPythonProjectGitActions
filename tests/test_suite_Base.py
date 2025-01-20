@@ -1,8 +1,11 @@
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.remote_connection import RemoteConnection
 import logging
+
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class TestSuiteBase:
@@ -10,22 +13,29 @@ class TestSuiteBase:
     RUN_LOCALLY = True  # Changed to True for local execution
 
     @classmethod
+
+    import sys
+    import traceback
+
+    @classmethod
     def get_driver(cls) -> webdriver:
-        """
-        Create and return a Selenium WebDriver instance.
-        Returns:
-            webdriver: Configured WebDriver instance
-        """
         chrome_options = cls.get_web_driver_options()
 
         if cls.RUN_LOCALLY:
             try:
-                # Create local Chrome WebDriver
-                driver = webdriver.Chrome(options=chrome_options)
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
                 logging.info("Successfully created local Chrome WebDriver")
                 return driver
             except WebDriverException as e:
-                logging.error(f"Error creating local Chrome WebDriver: {e}")
+                logging.error(f"WebDriver Exception: {e}")
+                logging.error(f"Detailed traceback: {traceback.format_exc()}")
+
+                # Additional system diagnostics
+                logging.info(f"Python version: {sys.version}")
+                logging.info(f"Selenium version: {webdriver.__version__}")
+                logging.info(f"Chrome options: {chrome_options.arguments}")
+
                 raise
         else:
             # Grid execution code
@@ -37,6 +47,9 @@ class TestSuiteBase:
                 chrome_options.set_capability('platformName', 'linux')
                 chrome_options.set_capability('se:noVNC', True)
                 chrome_options.set_capability('se:vncEnabled', True)
+                chrome_options.page_load_strategy = 'normal'
+                chrome_options.add_argument('--remote-debugging-port=9222')
+                chrome_options.add_experimental_option('useAutomationExtension', False)
 
                 driver = webdriver.Remote(
                     command_executor=remote_connection,
