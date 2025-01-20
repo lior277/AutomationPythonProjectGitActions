@@ -61,7 +61,8 @@ chmod 777 /app/test-results\n\
 Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
-exec python -m pytest tests/ui/ -v \
+python -m pytest tests/ui/ \
+    -v \
     --html=test-results/report.html \
     --self-contained-html\n\
 ' > /app/entrypoint.sh && \
