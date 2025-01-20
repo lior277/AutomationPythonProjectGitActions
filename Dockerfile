@@ -6,7 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    HOME=/home/testuser
 
 # Set the working directory in the container
 WORKDIR /app
@@ -23,6 +24,7 @@ RUN apt-get update && \
         libgconf-2-4 \
         default-jdk \
         ca-certificates \
+        procps \
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
     && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update \
@@ -31,7 +33,9 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m testuser \
     && mkdir -p /app/test-results /app/logs \
-    && chown -R testuser:testuser /app /app/test-results /app/logs
+    && chown -R testuser:testuser /app /app/test-results /app/logs \
+    && mkdir -p /tmp/.X11-unix \
+    && chmod 1777 /tmp/.X11-unix
 
 # Install ChromeDriver
 RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
@@ -57,11 +61,9 @@ chmod 777 /app/test-results\n\
 Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
-exec python -m pytest -v \
-    --html=/app/test-results/report.html \
-    --self-contained-html \
-    --log-cli-level=INFO \
-    tests/ui/\n\
+exec python -m pytest tests/ui/ -v \
+    --html=test-results/report.html \
+    --self-contained-html\n\
 ' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh && \
     chown testuser:testuser /app/entrypoint.sh
