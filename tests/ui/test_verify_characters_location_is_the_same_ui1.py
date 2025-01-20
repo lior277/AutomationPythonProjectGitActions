@@ -6,22 +6,21 @@ from Infrastructure.Infra.dal.data_reposetory.data_rep import DataRep
 from Infrastructure.objects.objects_api.episode_page_api import EpisodePageApi
 from Infrastructure.objects.objects_ui.google_home_page_ui import GoogleHomePageUi
 
+# Create a logger for this module
+logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 class TestVerifyCharacterLocation:
     """Test class to verify character locations."""
 
     @pytest.mark.regression
-    async def test_verify_characters_location_is_the_same_ui(self, driver_fixture, caplog):
+    async def test_verify_characters_location_is_the_same_ui(self, driver_fixture):
         """Verify that two randomly selected characters have the same location."""
-        # Set logging level
-        caplog.set_level(logging.INFO)
-
         try:
             driver = driver_fixture
 
             # Fetch character details from the API
-            caplog.info("Fetching character details from API")
+            logger.info("Fetching character details from API")
             episode_page_api = EpisodePageApi()
             character_details = await episode_page_api.randomly_choose_two_characters_pipe_async()
 
@@ -34,10 +33,10 @@ class TestVerifyCharacterLocation:
             character_1_name = character_1.name
             character_1_location = character_1.location
 
-            caplog.info(f"Character 1: {character_1_name} (ID: {character_1_id}, Location: {character_1_location})")
+            logger.info(f"Character 1: {character_1_name} (ID: {character_1_id}, Location: {character_1_location})")
 
             # Navigate to Google Home Page and search for Character 1
-            caplog.info(f"Navigating to Google Home Page and searching for {character_1_name}")
+            logger.info(f"Navigating to Google Home Page and searching for {character_1_name}")
             driver.get(DataRep.google_home_page_url)
             google_home_page = GoogleHomePageUi(driver)
             google_search_image_page = google_home_page.click_on_images_link()
@@ -55,21 +54,21 @@ class TestVerifyCharacterLocation:
             character_2_location = character_2.location
             character_2_image_url = character_2.image
 
-            caplog.info(f"Character 2: {character_2_name} (ID: {character_2_id}, Location: {character_2_location})")
+            logger.info(f"Character 2: {character_2_name} (ID: {character_2_id}, Location: {character_2_location})")
 
             # Navigate to Character 2's image URL
-            caplog.info(f"Navigating to Character 2's image URL: {character_2_image_url}")
+            logger.info(f"Navigating to Character 2's image URL: {character_2_image_url}")
             driver.get(character_2_image_url)
 
             # Compare locations
             if character_1_location != character_2_location:
-                caplog.warning(
+                logger.warning(
                     f"Location mismatch - "
                     f"Character 1 location: {character_1_location} ({character_1_name}) vs "
                     f"Character 2 location: {character_2_location} ({character_2_name})"
                 )
             else:
-                caplog.info(f"Both characters are from the same location: {character_1_location}")
+                logger.info(f"Both characters are from the same location: {character_1_location}")
 
             # Assert that both characters have the same location
             assert character_1_location == character_2_location, (
@@ -78,17 +77,17 @@ class TestVerifyCharacterLocation:
             )
 
         except AssertionError as ae:
-            caplog.error(f"Assertion Error: {ae}")
+            logger.error(f"Assertion Error: {ae}")
             # Capture screenshot on failure
             screenshot_path = f"/app/test-results/screenshots/{self.__class__.__name__}_failure.png"
             driver_fixture.save_screenshot(screenshot_path)
-            caplog.error(f"Screenshot saved to {screenshot_path}")
+            logger.error(f"Screenshot saved to {screenshot_path}")
             raise
 
         except Exception as e:
-            caplog.error(f"Unexpected error: {e}", exc_info=True)
+            logger.error(f"Unexpected error: {e}", exc_info=True)
             # Capture screenshot on unexpected error
             screenshot_path = f"/app/test-results/screenshots/{self.__class__.__name__}_error.png"
             driver_fixture.save_screenshot(screenshot_path)
-            caplog.error(f"Screenshot saved to {screenshot_path}")
+            logger.error(f"Screenshot saved to {screenshot_path}")
             raise

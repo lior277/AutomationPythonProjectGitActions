@@ -62,6 +62,7 @@ Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
 python -m pytest tests/ui/ \
+    -v \
     --html=/app/test-results/report.html \
     --self-contained-html\n\
 ' > /app/entrypoint.sh && \
