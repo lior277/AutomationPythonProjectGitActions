@@ -22,8 +22,8 @@ class TestSuiteBase:
 
         if cls.RUN_LOCALLY:
             try:
-                # Enhanced driver installation with additional checks
-                driver_path = ChromeDriverManager(cache_valid_range=30).install()
+                # Standard ChromeDriverManager installation
+                driver_path = ChromeDriverManager().install()
 
                 # Verify driver executable permissions
                 os.chmod(driver_path, 0o755)
