@@ -46,7 +46,7 @@ RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt pytest-html
 
 # Create entrypoint script
 RUN echo '#!/bin/bash\n\
@@ -61,13 +61,11 @@ chmod 777 /app/test-results\n\
 Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
-python -m pytest tests/ui/ \
-    -v \
-    --html=/app/test-results/report.html \
-    --self-contained-html\n\
+python -m pytest tests/ui/ -v\n\
 ' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh && \
     chown testuser:testuser /app/entrypoint.sh
+
 # Copy the project files
 COPY --chown=testuser:testuser . /app/
 
