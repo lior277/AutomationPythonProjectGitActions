@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
