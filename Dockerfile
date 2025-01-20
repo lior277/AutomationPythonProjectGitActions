@@ -62,13 +62,11 @@ Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
 python -m pytest tests/ui/ \
-    -v \
-    --html=test-results/report.html \
+    --html=/app/test-results/report.html \
     --self-contained-html\n\
 ' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh && \
     chown testuser:testuser /app/entrypoint.sh
-
 # Copy the project files
 COPY --chown=testuser:testuser . /app/
 
