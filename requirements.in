@@ -1,0 +1,6 @@
+aiohttp==3.11.11
+Pillow==11.1.0
+pytest==8.3.4
+Requests==2.32.3
+selenium==4.27.1
+webdriver_manager==4.0.2
