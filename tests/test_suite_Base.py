@@ -16,11 +16,6 @@ class TestSuiteBase:
     RUN_LOCALLY = True  # Changed to True for local execution
 
     @classmethod
-
-    import sys
-    import traceback
-
-    @classmethod
     def get_driver(cls) -> webdriver:
         chrome_options = cls.get_web_driver_options()
 
@@ -36,7 +31,10 @@ class TestSuiteBase:
 
                 # Additional system diagnostics
                 logging.info(f"Python version: {sys.version}")
-                logging.info(f"Selenium version: {webdriver.__version__}")
+                try:
+                    logging.info(f"Selenium version: {webdriver.__version__}")
+                except AttributeError:
+                    logging.info("Could not retrieve Selenium version")
                 logging.info(f"Chrome options: {chrome_options.arguments}")
 
                 raise
