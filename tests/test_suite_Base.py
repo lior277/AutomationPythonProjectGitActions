@@ -24,7 +24,7 @@ class TestSuiteBase:
 
         if cls.RUN_LOCALLY:
             try:
-                # Install Chrome and ChromeDriver if not present
+                # Ensure Chrome is installed
                 cls._ensure_chrome_installed()
 
                 # Standard ChromeDriverManager installation
@@ -37,9 +37,6 @@ class TestSuiteBase:
                     executable_path=driver_path,
                     log_path='chromedriver.log'  # Detailed ChromeDriver logs
                 )
-
-                # Additional pre-launch checks
-                cls._verify_chrome_compatibility(driver_path)
 
                 driver = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -65,11 +62,6 @@ class TestSuiteBase:
 
                 # Log Chrome options and path details
                 logging.info(f"Chrome options: {chrome_options.arguments}")
-                logging.info(f"ChromeDriver path: {driver_path}")
-
-                # Check system environment
-                chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
-                logging.info(f"Chrome executable path: {chrome_path}")
 
                 raise
 
@@ -111,31 +103,17 @@ class TestSuiteBase:
     def _ensure_chrome_installed(cls):
         """Ensure Chrome browser is installed."""
         try:
-            subprocess.run(['which', 'google-chrome'], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            logging.info("Chrome not found. Attempting to install...")
-            try:
-                subprocess.run([
-                    'wget', 'https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb',
-                    '-O', '/tmp/chrome.deb'
-                ], check=True)
-                subprocess.run(['sudo', 'dpkg', '-i', '/tmp/chrome.deb'], check=True)
-                subprocess.run(['sudo', 'apt-get', 'install', '-f', '-y'], check=True)
-            except Exception as e:
-                logging.error(f"Failed to install Chrome: {e}")
-                raise
+            # Check if Chrome is already installed
+            chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
+            if chrome_path:
+                logging.info(f"Chrome found at: {chrome_path}")
+                return
 
-    @classmethod
-    def _verify_chrome_compatibility(cls, driver_path):
-        """Verify ChromeDriver and Chrome compatibility."""
-        try:
-            chrome_version_output = subprocess.check_output(['google-chrome', '--version']).decode().strip()
-            chromedriver_version_output = subprocess.check_output([driver_path, '--version']).decode().strip()
-
-            logging.info(f"Chrome Version: {chrome_version_output}")
-            logging.info(f"ChromeDriver Version: {chromedriver_version_output}")
+            # If not found, use Selenium's WebDriver Manager to handle Chrome installation
+            logging.info("Chrome not found. Using WebDriver Manager to manage Chrome.")
         except Exception as e:
-            logging.error(f"Version compatibility check failed: {e}")
+            logging.error(f"Chrome installation check failed: {e}")
+            raise
 
     @classmethod
     def driver_dispose(cls, driver: webdriver = None):

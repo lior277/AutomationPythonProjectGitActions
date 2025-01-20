@@ -11,19 +11,34 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and Chrome
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         wget \
         unzip \
         gnupg \
-        bash \
+        xvfb \
+        libxi6 \
+        libgconf-2-4 \
+        default-jdk \
+        ca-certificates \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m testuser \
     && mkdir -p /app/test-results /app/logs \
     && chown -R testuser:testuser /app /app/test-results /app/logs
+
+# Install ChromeDriver
+RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
+    && wget -N https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip -P /tmp \
+    && unzip /tmp/chromedriver_linux64.zip -d /usr/local/bin \
+    && rm /tmp/chromedriver_linux64.zip \
+    && chmod +x /usr/local/bin/chromedriver
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt /app/
@@ -37,6 +52,9 @@ set -e\n\
 mkdir -p /app/test-results\n\
 chown -R testuser:testuser /app/test-results\n\
 chmod 777 /app/test-results\n\
+\n\
+# Start virtual framebuffer\n\
+Xvfb :99 & export DISPLAY=:99\n\
 \n\
 cd /app\n\
 exec python -m pytest -v \
