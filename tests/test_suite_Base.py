@@ -1,5 +1,6 @@
 import sys
 import traceback
+import os
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -12,8 +13,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 
 class TestSuiteBase:
-    SELENIUM_GRID_URL = "http://localhost:4444/wd/hub"  # Changed from selenium-hub to localhost
-    RUN_LOCALLY = True  # Changed to True for local execution
+    SELENIUM_GRID_URL = "http://localhost:4444/wd/hub"
+    RUN_LOCALLY = True
 
     @classmethod
     def get_driver(cls) -> webdriver:
@@ -21,33 +22,65 @@ class TestSuiteBase:
 
         if cls.RUN_LOCALLY:
             try:
-                service = Service(ChromeDriverManager().install())
+                # Enhanced driver installation with additional checks
+                driver_path = ChromeDriverManager(cache_valid_range=30).install()
+
+                # Verify driver executable permissions
+                os.chmod(driver_path, 0o755)
+
+                service = Service(
+                    executable_path=driver_path,
+                    log_path='chromedriver.log'  # Detailed ChromeDriver logs
+                )
+
                 driver = webdriver.Chrome(service=service, options=chrome_options)
+
+                # Additional driver verification
+                driver.set_page_load_timeout(30)
+                driver.implicitly_wait(10)
+
                 logging.info("Successfully created local Chrome WebDriver")
                 return driver
+
             except WebDriverException as e:
+                # Comprehensive error logging
                 logging.error(f"WebDriver Exception: {e}")
                 logging.error(f"Detailed traceback: {traceback.format_exc()}")
 
-                # Additional system diagnostics
+                # Enhanced system diagnostics
                 logging.info(f"Python version: {sys.version}")
                 try:
-                    logging.info(f"Selenium version: {webdriver.__version__}")
-                except AttributeError:
+                    import selenium
+                    logging.info(f"Selenium version: {selenium.__version__}")
+                except Exception:
                     logging.info("Could not retrieve Selenium version")
+
+                # Log Chrome options and path details
                 logging.info(f"Chrome options: {chrome_options.arguments}")
+                logging.info(f"ChromeDriver path: {driver_path}")
+
+                # Check system environment
+                try:
+                    import shutil
+                    chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
+                    logging.info(f"Chrome executable path: {chrome_path}")
+                except Exception:
+                    logging.error("Could not find Chrome executable")
 
                 raise
+
         else:
             # Grid execution code
             logging.info("Attempting to connect to Selenium Grid...")
             try:
                 remote_connection = RemoteConnection(cls.SELENIUM_GRID_URL)
 
-                # Set capabilities
+                # Enhanced capabilities
                 chrome_options.set_capability('platformName', 'linux')
                 chrome_options.set_capability('se:noVNC', True)
                 chrome_options.set_capability('se:vncEnabled', True)
+                chrome_options.set_capability('acceptInsecureCerts', True)
+
                 chrome_options.page_load_strategy = 'normal'
                 chrome_options.add_argument('--remote-debugging-port=9222')
                 chrome_options.add_experimental_option('useAutomationExtension', False)
@@ -57,23 +90,23 @@ class TestSuiteBase:
                     options=chrome_options
                 )
 
+                # Enhanced timeouts
                 driver.set_page_load_timeout(30)
                 driver.implicitly_wait(10)
+                driver.set_script_timeout(30)
 
                 logging.info(f"Successfully connected to Selenium Grid at {cls.SELENIUM_GRID_URL}")
                 return driver
 
             except WebDriverException as e:
                 logging.error(f"Error connecting to Selenium Grid at {cls.SELENIUM_GRID_URL}: {e}")
+                logging.error(f"Detailed traceback: {traceback.format_exc()}")
                 raise
 
     @classmethod
     def driver_dispose(cls, driver: webdriver = None):
         """
         Safely quit the WebDriver session.
-
-        Args:
-            driver (webdriver, optional): WebDriver instance to quit
         """
         if driver is not None:
             try:
@@ -86,13 +119,10 @@ class TestSuiteBase:
     def get_web_driver_options() -> ChromeOptions:
         """
         Configure and return Chrome WebDriver options.
-
-        Returns:
-            ChromeOptions: Configured Chrome options
         """
         options = ChromeOptions()
 
-        # Required for running in container
+        # Container and system compatibility
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
 
@@ -104,24 +134,26 @@ class TestSuiteBase:
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=en-GB')
 
-        # Additional stability and performance options
+        # Security and performance options
         options.add_argument('--disable-extensions')
+        options.add_argument('--disable-web-security')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--ignore-certificate-errors')
-        options.add_argument('--disable-web-security')
-
-        # Performance and logging options
-        options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-software-rasterizer')
 
-        # Logging configuration
+        # Logging configurations
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        options.add_argument('--log-level=3')  # Minimal logging
 
         return options
 
 
-# Configure logging
+# Configure logging with more detailed format
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('selenium_tests.log')
+    ]
 )
