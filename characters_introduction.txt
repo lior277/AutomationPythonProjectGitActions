@@ -1,0 +1,2 @@
+Character name is: Hookah Alien, Character ID is: 158, Character location is: Interdimensional Customs, Character status is: Alive, Character species is: Alien.
+Character name is: Beth Smith, Character ID is: 38, Character location is: Earth (C-137), Character status is: Alive, Character species is: Human.
