@@ -12,9 +12,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set the working directory in the container
 WORKDIR /app
 
-# Create necessary directories and set permissions
+# First create the user
+RUN useradd -m testuser
+
+# Then create directories and set permissions
 RUN mkdir -p /app/test-results/logs && \
-    chown -R testuser:testuser /app/test-results
+    mkdir -p /app/logs && \
+    chown -R testuser:testuser /app /app/test-results /app/logs
 
 # Install system dependencies and Chrome
 RUN apt-get update && \
@@ -35,9 +39,6 @@ RUN apt-get update && \
     && apt-get install -y google-chrome-stable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd -m testuser \
-    && mkdir -p /app/test-results /app/logs \
-    && chown -R testuser:testuser /app /app/test-results /app/logs \
     && mkdir -p /tmp/.X11-unix \
     && chmod 1777 /tmp/.X11-unix
 
