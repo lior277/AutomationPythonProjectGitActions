@@ -12,6 +12,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set the working directory in the container
 WORKDIR /app
 
+# Create necessary directories and set permissions
+RUN mkdir -p /app/test-results/logs && \
+    chown -R testuser:testuser /app/test-results
+
 # Install system dependencies and Chrome
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -53,7 +57,7 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Ensure test-results directory exists and is writable\n\
-mkdir -p /app/test-results\n\
+mkdir -p /app/test-results/logs\n\
 chown -R testuser:testuser /app/test-results\n\
 chmod 777 /app/test-results\n\
 \n\

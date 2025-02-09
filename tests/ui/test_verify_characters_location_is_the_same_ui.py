@@ -12,7 +12,6 @@ class TestVerifyCharacterLocation:
     """Test class to verify character locations."""
 
     @pytest.mark.regression
-    @pytest.mark.skip
     async def test_verify_characters_location_is_the_same_ui(self, driver_fixture):
         """Verify that two randomly selected characters have the same location."""
         driver = driver_fixture

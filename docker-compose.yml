@@ -1,3 +1,5 @@
+version: '3'
+
 services:
   selenium-hub:
     image: selenium/hub:4.27.0-20250101
@@ -6,6 +8,11 @@ services:
       - "4444:4444"
       - "4442:4442"
       - "4443:4443"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - selenium-grid
 
@@ -13,11 +20,14 @@ services:
     image: selenium/node-chrome:4.27.0-20250101
     shm_size: '2g'
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=5
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     networks:
       - selenium-grid
 
@@ -25,16 +35,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    user: testuser
     volumes:
       - ./test-results:/app/test-results
+      - ./test-results/logs:/app/test-results/logs
     environment:
       - PYTHONUNBUFFERED=1
+      - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
+      - RUN_LOCALLY=false
     depends_on:
-      - chrome
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
+      chrome:
+        condition: service_started
     networks:
       - selenium-grid
 
 networks:
   selenium-grid:
-    driver: bridge
+    external: true
