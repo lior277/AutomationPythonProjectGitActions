@@ -12,50 +12,49 @@ def pytest_configure(config):
     # Create base test results directory
     results_dir = os.path.join(os.getcwd(), 'test-results')
     logs_dir = os.path.join(results_dir, 'logs')
-    screenshots_dir = os.path.join(results_dir, 'screenshots')
 
     # Create all necessary directories
-    for directory in [results_dir, logs_dir, screenshots_dir]:
+    for directory in [results_dir, logs_dir]:
         os.makedirs(directory, exist_ok=True)
 
     # Configure pytest-html report
     config.option.htmlpath = os.path.join(results_dir, 'report.html')
     config.option.self_contained_html = True
 
-    # Set up logging configuration
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(os.path.join(logs_dir, 'pytest_execution.log')),
-            logging.FileHandler(os.path.join(logs_dir, 'pytest_debug.log'), level=logging.DEBUG)
-        ]
+    # Create file handlers
+    execution_handler = logging.FileHandler(os.path.join(logs_dir, 'pytest_execution.log'))
+    execution_handler.setLevel(logging.INFO)
+
+    debug_handler = logging.FileHandler(os.path.join(logs_dir, 'pytest_debug.log'))
+    debug_handler.setLevel(logging.DEBUG)
+
+    # Create formatters and add them to the handlers
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
     )
+    execution_handler.setFormatter(formatter)
+    debug_handler.setFormatter(formatter)
+
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(execution_handler)
+    root_logger.addHandler(debug_handler)
+    root_logger.addHandler(logging.StreamHandler())  # Console output
 
 
 @pytest.fixture(scope='session', autouse=True)
 def configure_grid():
-    """
-    Configure Selenium Grid settings from environment variables.
-    """
+    """Configure Selenium Grid settings."""
     from tests.test_suite_Base import TestSuiteBase
 
-    grid_url = os.getenv('SELENIUM_GRID_URL', 'http://selenium-hub:4444/wd/hub')
-    run_locally = os.getenv('RUN_LOCALLY', 'false').lower() == 'true'
-
-    TestSuiteBase.SELENIUM_GRID_URL = grid_url
-    TestSuiteBase.RUN_LOCALLY = run_locally
-
-    logging.info(f"Configured TestSuiteBase with GRID_URL: {grid_url}, RUN_LOCALLY: {run_locally}")
+    TestSuiteBase.SELENIUM_GRID_URL = os.getenv('SELENIUM_GRID_URL', 'http://selenium-hub:4444/wd/hub')
+    TestSuiteBase.RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'false').lower() == 'true'
 
 
 @pytest.fixture(scope='function')
 def driver_fixture() -> Generator[WebDriver, None, None]:
-    """
-    Provides a WebDriver instance for each test function.
-    Handles setup and teardown of the WebDriver.
-    """
+    """Provides a WebDriver instance for each test function."""
     from tests.test_suite_Base import TestSuiteBase
 
     logging.info("Setting up WebDriver for test...")
@@ -76,45 +75,8 @@ def driver_fixture() -> Generator[WebDriver, None, None]:
             TestSuiteBase.driver_dispose(driver)
 
 
-@pytest.fixture(autouse=True)
-def test_logger(request):
-    """
-    Provides logging for each test case execution.
-    """
-    logging.info(f"Starting test: {request.node.name}")
-    yield
-    logging.info(f"Finished test: {request.node.name}")
-
-
-def pytest_exception_interact(node, call, report):
-    """
-    Handles test failures by capturing screenshots and logging additional information.
-    """
-    if report.failed:
-        from tests.test_suite_Base import TestSuiteBase
-
-        try:
-            driver = node.funcargs.get('driver_fixture')
-            if driver:
-                screenshot_dir = os.path.join('test-results', 'screenshots')
-                screenshot_path = os.path.join(screenshot_dir, f"failure_{node.name}.png")
-
-                driver.save_screenshot(screenshot_path)
-                logging.error(f"Test failed: {node.name}")
-                logging.error(f"Screenshot saved: {screenshot_path}")
-
-                # Log additional browser information
-                logging.error(f"Current URL: {driver.current_url}")
-                logging.error(f"Page title: {driver.title}")
-
-        except Exception as e:
-            logging.error(f"Failed to capture failure information: {str(e)}")
-
-
 def pytest_sessionfinish(session, exitstatus):
-    """
-    Performs cleanup and logging at the end of the test session.
-    """
+    """Cleanup after all tests are done."""
     logging.info(f"Test session completed with exit status: {exitstatus}")
 
     # Log test session summary
@@ -123,3 +85,8 @@ def pytest_sessionfinish(session, exitstatus):
     logging.info(f"Passed: {passed}")
     logging.info(f"Failed: {session.testsfailed}")
     logging.info(f"Skipped: {len(session.skipped)}")
+
+    # Close all handlers to prevent resource warnings
+    for handler in logging.getLogger().handlers[:]:
+        handler.close()
+        logging.getLogger().removeHandler(handler)
