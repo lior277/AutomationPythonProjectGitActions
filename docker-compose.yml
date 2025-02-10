@@ -1,13 +1,16 @@
 version: '3'
 
 services:
+  #########################
+  # Selenium Hub Service
+  #########################
   selenium-hub:
     image: selenium/hub:4.27.0-20250101
     container_name: selenium-hub
     ports:
-      - "4444:4444"
-      - "4442:4442"
-      - "4443:4443"
+      - "4444:4444"  # Selenium Grid Console
+      - "4442:4442"  # Publish port
+      - "4443:4443"  # Subscribe port
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
       interval: 10s
@@ -16,34 +19,44 @@ services:
     networks:
       - selenium-grid
 
+  #########################
+  # Chrome Node Service
+  #########################
   chrome:
     image: selenium/node-chrome:4.27.0-20250101
-    shm_size: '2g'
+    shm_size: '2g'  # Increased shared memory for better performance
     depends_on:
       selenium-hub:
         condition: service_healthy
     environment:
+      # Event bus configuration
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      # Node configuration
       - SE_NODE_MAX_SESSIONS=5
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     networks:
       - selenium-grid
 
+  #########################
+  # Test Runner Service
+  #########################
   test-runner:
     build:
       context: .
       dockerfile: Dockerfile
-    user: testuser
+    user: testuser  # Run as non-root user
     volumes:
+      # Mount test results directory for persistence
       - ./test-results:/app/test-results
       - ./test-results/logs:/app/test-results/logs
     environment:
-      - PYTHONUNBUFFERED=1
+      - PYTHONUNBUFFERED=1  # Ensure Python output is not buffered
       - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
       - RUN_LOCALLY=false
     depends_on:
+      # Ensure dependencies are ready before starting
       selenium-hub:
         condition: service_healthy
       chrome:
@@ -51,6 +64,9 @@ services:
     networks:
       - selenium-grid
 
+#########################
+# Networks Configuration
+#########################
 networks:
   selenium-grid:
-    external: true
+    external: true  # Use pre-existing network created by GitHub Actions

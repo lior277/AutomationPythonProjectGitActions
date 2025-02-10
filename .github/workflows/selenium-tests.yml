@@ -1,22 +1,34 @@
 name: Selenium Grid Tests
 
+#######################
+# Workflow Triggers
+#######################
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual trigger
 
+#######################
+# Permissions
+#######################
 permissions:
   contents: write
   pull-requests: write
   issues: write
   repository-projects: write
 
+#######################
+# Jobs
+#######################
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    #######################
+    # Setup Environment
+    #######################
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -24,13 +36,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-        cache: 'pip'
+        cache: 'pip'  # Enable pip caching
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
 
+    #######################
+    # Docker Setup
+    #######################
     - name: Set up Docker Compose
       run: |
         DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
@@ -41,6 +56,9 @@ jobs:
     - name: Clean up existing Docker resources
       run: docker compose down --volumes --remove-orphans || true
 
+    #######################
+    # Test Environment Setup
+    #######################
     - name: Setup test directory
       run: |
         mkdir -p test-results/logs
@@ -50,6 +68,9 @@ jobs:
     - name: Create Selenium Grid Network
       run: docker network create selenium-grid || true
 
+    #######################
+    # Selenium Grid Setup
+    #######################
     - name: Start Selenium Grid
       run: |
         docker compose up -d selenium-hub chrome
@@ -58,6 +79,7 @@ jobs:
         timeout=180
         start_time=$(date +%s)
         
+        # Poll Selenium Grid status until ready or timeout
         while true; do
           if curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true"; then
             echo "Selenium Grid is ready!"
@@ -77,10 +99,16 @@ jobs:
           sleep 5
         done
 
+    #######################
+    # Test Execution
+    #######################
     - name: Run tests
       run: |
         docker compose run --rm test-runner
 
+    #######################
+    # Logging & Artifacts
+    #######################
     - name: Print logs on failure
       if: failure()
       run: |
@@ -92,7 +120,7 @@ jobs:
         docker compose logs test-runner
 
     - name: Upload test results
-      if: always()
+      if: always()  # Upload results whether tests pass or fail
       uses: actions/upload-artifact@v4
       with:
         name: test-results
@@ -101,6 +129,9 @@ jobs:
           test-results/logs/
         retention-days: 30
 
+    #######################
+    # Notifications
+    #######################
     - name: Slack Notification
       if: failure()
       uses: 8398a7/action-slack@v3
@@ -111,8 +142,11 @@ jobs:
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
+    #######################
+    # Cleanup
+    #######################
     - name: Cleanup
-      if: always()
+      if: always()  # Always run cleanup, even if previous steps fail
       run: |
         docker compose down --volumes --remove-orphans
         docker network rm selenium-grid || true
