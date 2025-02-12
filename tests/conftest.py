@@ -99,31 +99,30 @@ def driver_fixture() -> Generator[WebDriver, None, None]:
 
 def pytest_sessionfinish(session, exitstatus):
     """Generate test session summary and clean up resources."""
-    # Get test counts using pytest's reporting utils
-    passed = 0
-    failed = 0
-    skipped = 0
-    total = 0
+    try:
+        # Get test report statistics
+        stats = session.config._reports if hasattr(session.config, '_reports') else {}
+        passed = len([r for r in stats.get('passed', [])])
+        failed = len([r for r in stats.get('failed', [])])
+        skipped = len([r for r in stats.get('skipped', [])])
+        total = session.testscollected if hasattr(session, 'testscollected') else 0
 
-    # Count test results
-    for report in session.reporterconfig.stats.get('', []):
-        total += 1
-        if report.passed:
-            passed += 1
-        elif report.failed:
-            failed += 1
-        elif report.skipped:
-            skipped += 1
+        # Log summary
+        logging.info("Test Session Summary:")
+        logging.info(f"Total tests: {total}")
+        logging.info(f"Passed: {passed}")
+        logging.info(f"Failed: {failed}")
+        logging.info(f"Skipped: {skipped}")
+        logging.info(f"Exit status: {exitstatus}")
 
-    # Log summary
-    logging.info("Test Session Summary:")
-    logging.info(f"Total tests: {total}")
-    logging.info(f"Passed: {passed}")
-    logging.info(f"Failed: {failed}")
-    logging.info(f"Skipped: {skipped}")
-    logging.info(f"Exit status: {exitstatus}")
+    except Exception as e:
+        logging.error(f"Error generating test summary: {str(e)}")
 
-    # Clean up logging handlers
-    for handler in logging.getLogger().handlers[:]:
-        handler.close()
-        logging.getLogger().removeHandler(handler)
+    finally:
+        # Clean up logging handlers
+        for handler in logging.getLogger().handlers[:]:
+            try:
+                handler.close()
+                logging.getLogger().removeHandler(handler)
+            except Exception as e:
+                print(f"Error cleaning up logging handler: {str(e)}")
