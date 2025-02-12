@@ -1,0 +1,15 @@
+name: Test Job
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: ./.github/workflows/setup-docker-compose.yml

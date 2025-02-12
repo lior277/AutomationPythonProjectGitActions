@@ -1,0 +1,14 @@
+name: Clean Docker Environment
+
+on:
+  workflow_call:
+
+jobs:
+  clean-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clean Docker environment
+        run: |
+          docker system prune -f || true
+          docker compose down --volumes --remove-orphans || true

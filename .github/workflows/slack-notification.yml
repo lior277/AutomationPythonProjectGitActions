@@ -1,0 +1,26 @@
+name: Slack Notification
+
+on:
+  workflow_call:
+    inputs:
+      SLACK_WEBHOOK_URL:
+        required: true
+        type: string
+
+jobs:
+  slack-notification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Slack on failure
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            Test run failed!
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_id }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}

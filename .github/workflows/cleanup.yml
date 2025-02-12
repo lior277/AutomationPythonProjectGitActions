@@ -1,0 +1,14 @@
+name: Cleanup
+
+on:
+  workflow_call:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down --volumes --remove-orphans || true

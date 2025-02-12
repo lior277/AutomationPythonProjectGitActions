@@ -1,0 +1,14 @@
+name: Setup Test Environment
+
+on:
+  workflow_call:
+
+jobs:
+  setup-test-env:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup test environment
+        run: |
+          mkdir -p ${{ env.TEST_RESULTS_DIR }}/{logs,screenshots,reports}
+          chmod -R 777 ${{ env.TEST_RESULTS_DIR }}

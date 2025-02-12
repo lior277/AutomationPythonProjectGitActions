@@ -1,0 +1,32 @@
+name: Start Selenium Grid
+
+on:
+  workflow_call:
+
+jobs:
+  start-selenium-grid:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start Selenium Grid
+        id: start-grid
+        run: |
+          docker compose up -d selenium-hub chrome firefox
+
+          echo "Waiting for Selenium Grid..."
+          attempt=1
+          max_attempts=36
+          until curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true" || [ $attempt -eq $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts - Grid not ready, waiting..."
+            sleep 5
+            attempt=$((attempt + 1))
+          done
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "::error::Selenium Grid failed to start"
+            docker compose logs
+            exit 1
+          fi
+
+          echo "Selenium Grid is ready!"
+          docker compose ps

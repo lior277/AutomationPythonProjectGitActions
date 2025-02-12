@@ -1,0 +1,20 @@
+name: Run Tests
+
+on:
+  workflow_call:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run tests
+        id: run-tests
+        run: |
+          pytest \
+            --html=${{ env.TEST_RESULTS_DIR }}/report.html \
+            --self-contained-html \
+            --capture=tee-sys \
+            --cov=src \
+            --cov-report=xml:${{ env.TEST_RESULTS_DIR }}/coverage.xml \
+            --cov-report=html:${{ env.TEST_RESULTS_DIR }}/coverage_html

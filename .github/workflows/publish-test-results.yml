@@ -1,0 +1,16 @@
+name: Publish Test Results
+
+on:
+  workflow_call:
+
+jobs:
+  publish-test-results:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "${{ env.TEST_RESULTS_DIR }}/*.xml"
+          check_name: "Test Results"

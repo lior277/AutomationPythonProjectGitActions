@@ -105,7 +105,7 @@ RUN mkdir -p /app/test-results/{logs,screenshots,reports} && \
     chown -R testuser:testuser /app/test-results
 
 # Create entrypoint script
-COPY docker-entrypoint.sh /app/entrypoint.sh
+COPY scripts/docker-entrypoint.sh /app/entrypoint.sh
 
 # Set script permissions
 RUN chmod +x /app/entrypoint.sh && \
