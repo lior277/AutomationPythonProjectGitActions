@@ -1,127 +1,129 @@
 import pytest
 import os
 import logging
+from datetime import datetime
 from typing import Generator
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support.events import EventFiringWebDriver, AbstractEventListener
+
+
+class WebDriverListener(AbstractEventListener):
+    """Custom WebDriver event listener for logging and screenshots."""
+
+    def before_navigate_to(self, url, driver):
+        logging.info(f"Navigating to {url}")
+
+    def before_click(self, element, driver):
+        logging.info(f"Clicking element {element.tag_name}")
+
+    def on_exception(self, exception, driver):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        screenshot_path = os.path.join(
+            os.getenv('TEST_RESULTS_DIR', 'test-results'),
+            'screenshots',
+            f'error_{timestamp}.png'
+        )
+        driver.get_screenshot_as_file(screenshot_path)
+        logging.error(f"Screenshot saved to {screenshot_path}")
 
 
 def pytest_configure(config):
-    """
-    Configure pytest options and set up test environment.
-    Sets up directory structure and configures logging with multiple handlers.
-    """
-    #######################
-    # Directory Setup
-    #######################
-    # Create base test results directory
-    results_dir = os.path.join(os.getcwd(), 'test-results')
-    logs_dir = os.path.join(results_dir, 'logs')
+    """Configure test environment, directories, and logging."""
+    results_dir = os.path.join(os.getcwd(), os.getenv('TEST_RESULTS_DIR', 'test-results'))
+    for subdir in ['logs', 'screenshots', 'reports']:
+        os.makedirs(os.path.join(results_dir, subdir), exist_ok=True)
 
-    # Create all necessary directories
-    for directory in [results_dir, logs_dir]:
-        os.makedirs(directory, exist_ok=True)
-
-    # Configure pytest-html report
-    config.option.htmlpath = os.path.join(results_dir, 'report.html')
+    config.option.htmlpath = os.path.join(results_dir, 'reports/report.html')
     config.option.self_contained_html = True
 
-    #######################
-    # Logging Setup
-    #######################
-    # Create file handlers for different log levels
-    execution_handler = logging.FileHandler(os.path.join(logs_dir, 'pytest_execution.log'))
-    execution_handler.setLevel(logging.INFO)
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    handlers = [
+        (logging.INFO, 'execution.log'),
+        (logging.DEBUG, 'debug.log'),
+        (logging.ERROR, 'error.log')
+    ]
 
-    debug_handler = logging.FileHandler(os.path.join(logs_dir, 'pytest_debug.log'))
-    debug_handler.setLevel(logging.DEBUG)
+    for level, filename in handlers:
+        handler = logging.FileHandler(os.path.join(results_dir, 'logs', filename))
+        handler.setLevel(level)
+        handler.setFormatter(logging.Formatter(log_format))
+        logging.getLogger().addHandler(handler)
 
-    # Create formatter for consistent log message format
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
-    )
-    execution_handler.setFormatter(formatter)
-    debug_handler.setFormatter(formatter)
-
-    # Configure root logger with multiple handlers
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)  # Capture all log levels
-    root_logger.addHandler(execution_handler)  # INFO+ logs to execution file
-    root_logger.addHandler(debug_handler)  # DEBUG+ logs to debug file
-    root_logger.addHandler(logging.StreamHandler())  # Console output
+    logging.getLogger().setLevel(logging.DEBUG)
 
 
-#######################
-# Test Configuration
-#######################
 @pytest.fixture(scope='session', autouse=True)
 def configure_grid():
-    """
-    Configure Selenium Grid settings.
-    Automatically run once per test session to set up grid configuration.
-    """
+    """Configure Selenium Grid settings for the test session."""
     from tests.test_suite_Base import TestSuiteBase
-
-    # Set up grid URL and local execution flag from environment variables
     TestSuiteBase.SELENIUM_GRID_URL = os.getenv('SELENIUM_GRID_URL', 'http://selenium-hub:4444/wd/hub')
     TestSuiteBase.RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'false').lower() == 'true'
 
 
-#######################
-# WebDriver Fixture
-#######################
 @pytest.fixture(scope='function')
 def driver_fixture() -> Generator[WebDriver, None, None]:
-    """
-    Provides a WebDriver instance for each test function.
-    Handles setup and cleanup of WebDriver sessions.
-
-    Yields:
-        WebDriver: A configured WebDriver instance for test execution.
-    """
+    """Provide a WebDriver instance for each test function."""
     from tests.test_suite_Base import TestSuiteBase
 
-    logging.info("Setting up WebDriver for test...")
+    logging.info("Setting up WebDriver")
     driver = None
 
     try:
-        # Initialize WebDriver
-        driver = TestSuiteBase.get_driver()
-        logging.info("WebDriver setup completed successfully")
+        base_driver = TestSuiteBase.get_driver()
+        driver = EventFiringWebDriver(base_driver, WebDriverListener())
+        driver.maximize_window()
         yield driver
 
     except Exception as e:
-        logging.error(f"Error during WebDriver setup: {str(e)}")
+        logging.error(f"WebDriver setup failed: {str(e)}")
+        if driver:
+            try:
+                screenshot_path = os.path.join(
+                    os.getenv('TEST_RESULTS_DIR', 'test-results'),
+                    'screenshots',
+                    'setup_failure.png'
+                )
+                driver.get_screenshot_as_file(screenshot_path)
+            except Exception:
+                pass
         raise
 
     finally:
-        # Ensure WebDriver is properly cleaned up
         if driver:
-            logging.info("Cleaning up WebDriver...")
-            TestSuiteBase.driver_dispose(driver)
+            logging.info("Cleaning up WebDriver")
+            try:
+                TestSuiteBase.driver_dispose(driver.wrapped_driver)
+            except Exception as e:
+                logging.error(f"Error during WebDriver cleanup: {str(e)}")
 
 
-#######################
-# Session Cleanup
-#######################
 def pytest_sessionfinish(session, exitstatus):
-    """
-    Cleanup after all tests are done.
-    Logs test summary and ensures proper resource cleanup.
+    """Generate test session summary and clean up resources."""
+    # Get test counts using pytest's reporting utils
+    passed = 0
+    failed = 0
+    skipped = 0
+    total = 0
 
-    Args:
-        session: The pytest session object
-        exitstatus: The exit status code
-    """
-    logging.info(f"Test session completed with exit status: {exitstatus}")
+    # Count test results
+    for report in session.reporterconfig.stats.get('', []):
+        total += 1
+        if report.passed:
+            passed += 1
+        elif report.failed:
+            failed += 1
+        elif report.skipped:
+            skipped += 1
 
-    # Log comprehensive test session summary
-    passed = session.testscollected - session.testsfailed
-    logging.info(f"Total tests: {session.testscollected}")
+    # Log summary
+    logging.info("Test Session Summary:")
+    logging.info(f"Total tests: {total}")
     logging.info(f"Passed: {passed}")
-    logging.info(f"Failed: {session.testsfailed}")
-    logging.info(f"Skipped: {len(session.skipped)}")
+    logging.info(f"Failed: {failed}")
+    logging.info(f"Skipped: {skipped}")
+    logging.info(f"Exit status: {exitstatus}")
 
-    # Clean up logging handlers to prevent resource warnings
+    # Clean up logging handlers
     for handler in logging.getLogger().handlers[:]:
         handler.close()
         logging.getLogger().removeHandler(handler)
