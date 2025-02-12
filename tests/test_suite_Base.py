@@ -1,8 +1,6 @@
 import sys
 import traceback
 import os
-import shutil
-import subprocess
 import logging
 from typing import Optional
 
@@ -12,8 +10,6 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.remote_connection import RemoteConnection
 from selenium.webdriver.remote.webdriver import WebDriver
-from webdriver_manager.chrome import ChromeDriverManager
-
 
 class TestSuiteBase:
     """
@@ -29,34 +25,43 @@ class TestSuiteBase:
     log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
     os.makedirs(log_dir, exist_ok=True)
 
-    # Configure logging with multiple handlers for different log levels
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(os.path.join(log_dir, 'selenium_tests.log')),
-            logging.FileHandler(os.path.join(log_dir, 'selenium_debug.log'), level=logging.DEBUG),
-            logging.FileHandler(os.path.join(log_dir, 'selenium_errors.log'), level=logging.ERROR)
-        ]
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
     )
+
+    # Create handlers
+    stream_handler = logging.StreamHandler()
+    test_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_tests.log'))
+    debug_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_debug.log'))
+    error_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_errors.log'))
+
+    # Set levels for handlers
+    stream_handler.setLevel(logging.INFO)
+    test_file_handler.setLevel(logging.INFO)
+    debug_file_handler.setLevel(logging.DEBUG)
+    error_file_handler.setLevel(logging.ERROR)
+
+    # Set formatters for handlers
+    stream_handler.setFormatter(formatter)
+    test_file_handler.setFormatter(formatter)
+    debug_file_handler.setFormatter(formatter)
+    error_file_handler.setFormatter(formatter)
+
+    # Get the root logger and add handlers
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(stream_handler)
+    root_logger.addHandler(test_file_handler)
+    root_logger.addHandler(debug_file_handler)
+    root_logger.addHandler(error_file_handler)
 
     # Create class logger
     logger = logging.getLogger(__name__)
 
     @classmethod
     def get_driver(cls) -> WebDriver:
-        """
-        Creates and returns a WebDriver instance based on configuration.
-        Returns local Chrome WebDriver or Remote WebDriver for Grid.
-
-        Returns:
-            WebDriver: Configured WebDriver instance
-
-        Raises:
-            WebDriverException: If driver creation fails
-            Exception: For other unexpected errors
-        """
+        """Creates and returns a WebDriver instance based on configuration."""
         chrome_options = cls.get_web_driver_options()
 
         try:
@@ -71,31 +76,13 @@ class TestSuiteBase:
 
     @classmethod
     def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
-        """
-        Creates a local Chrome WebDriver instance.
-
-        Args:
-            chrome_options: Configured ChromeOptions instance
-
-        Returns:
-            WebDriver: Local Chrome WebDriver instance
-        """
+        """Creates a local Chrome WebDriver instance."""
         cls.logger.info("Setting up local Chrome WebDriver...")
 
         try:
-            cls._ensure_chrome_installed()
-
-            driver_path = ChromeDriverManager().install()
-            os.chmod(driver_path, 0o755)
-
-            service = Service(
-                executable_path=driver_path,
-                log_path=os.path.join(cls.log_dir, 'chromedriver.log')
-            )
-
+            service = Service()
             driver = webdriver.Chrome(service=service, options=chrome_options)
             cls._configure_driver_timeouts(driver)
-
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
 
@@ -105,28 +92,17 @@ class TestSuiteBase:
 
     @classmethod
     def _create_grid_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
-        """
-        Creates a Remote WebDriver instance connected to Selenium Grid.
-
-        Args:
-            chrome_options: Configured ChromeOptions instance
-
-        Returns:
-            WebDriver: Remote WebDriver instance
-        """
+        """Creates a Remote WebDriver instance connected to Selenium Grid."""
         cls.logger.info(f"Connecting to Selenium Grid at {cls.SELENIUM_GRID_URL}")
 
         try:
-            remote_connection = RemoteConnection(cls.SELENIUM_GRID_URL)
-
-            # Configure Grid-specific capabilities
             chrome_options.set_capability('platformName', 'linux')
             chrome_options.set_capability('se:noVNC', True)
             chrome_options.set_capability('se:vncEnabled', True)
             chrome_options.set_capability('acceptInsecureCerts', True)
 
             driver = webdriver.Remote(
-                command_executor=remote_connection,
+                command_executor=cls.SELENIUM_GRID_URL,
                 options=chrome_options
             )
 
@@ -141,45 +117,14 @@ class TestSuiteBase:
 
     @classmethod
     def _configure_driver_timeouts(cls, driver: WebDriver) -> None:
-        """
-        Configures standard timeouts for the WebDriver instance.
-
-        Args:
-            driver: WebDriver instance to configure
-        """
+        """Configures standard timeouts for the WebDriver instance."""
         driver.set_page_load_timeout(30)
         driver.implicitly_wait(10)
         driver.set_script_timeout(30)
 
     @classmethod
-    def _ensure_chrome_installed(cls) -> None:
-        """
-        Verifies Chrome browser installation.
-
-        Raises:
-            Exception: If Chrome installation check fails
-        """
-        try:
-            chrome_path = shutil.which('google-chrome') or shutil.which('chrome')
-            if chrome_path:
-                cls.logger.info(f"Chrome found at: {chrome_path}")
-                return
-
-            cls.logger.info("Chrome not found. Using WebDriver Manager to manage Chrome.")
-
-        except Exception as e:
-            cls.logger.error(f"Chrome installation check failed: {str(e)}")
-            raise
-
-    @classmethod
     def _log_driver_creation_error(cls, error: Exception, chrome_options: ChromeOptions) -> None:
-        """
-        Logs detailed information about driver creation failures.
-
-        Args:
-            error: The exception that occurred
-            chrome_options: The ChromeOptions instance being used
-        """
+        """Logs detailed information about driver creation failures."""
         cls.logger.error(f"WebDriver creation failed: {str(error)}")
         cls.logger.error(f"Traceback: {traceback.format_exc()}")
         cls.logger.debug(f"Python version: {sys.version}")
@@ -194,12 +139,7 @@ class TestSuiteBase:
 
     @classmethod
     def driver_dispose(cls, driver: Optional[WebDriver] = None) -> None:
-        """
-        Safely disposes of the WebDriver instance.
-
-        Args:
-            driver: WebDriver instance to dispose
-        """
+        """Safely disposes of the WebDriver instance."""
         if driver is not None:
             try:
                 driver.quit()
@@ -209,12 +149,7 @@ class TestSuiteBase:
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
-        """
-        Configures and returns Chrome WebDriver options.
-
-        Returns:
-            ChromeOptions: Configured options instance
-        """
+        """Configures and returns Chrome WebDriver options."""
         options = ChromeOptions()
 
         # Container and system compatibility
