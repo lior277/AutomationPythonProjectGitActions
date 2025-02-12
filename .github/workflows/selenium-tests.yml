@@ -1,152 +1,163 @@
 name: Selenium Grid Tests
 
-#######################
-# Workflow Triggers
-#######################
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # Allows manual trigger
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Daily run at midnight UTC
 
-#######################
-# Permissions
-#######################
 permissions:
   contents: write
   pull-requests: write
   issues: write
   repository-projects: write
 
-#######################
-# Jobs
-#######################
+env:
+  PYTHON_VERSION: '3.10'
+  DOCKER_COMPOSE_VERSION: 'v2.24.1'
+  SELENIUM_GRID_URL: 'http://selenium-hub:4444/wd/hub'
+  TEST_RESULTS_DIR: 'test-results'
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Prevent hung jobs
+
     steps:
-    #######################
-    # Setup Environment
-    #######################
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # For better PR comparison
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
-        cache: 'pip'  # Enable pip caching
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        cache-dependency-path: '**/requirements*.txt'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
+        pip install -r requirements-dev.txt  # Additional dev dependencies
 
-    #######################
-    # Docker Setup
-    #######################
     - name: Set up Docker Compose
       run: |
         DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
         mkdir -p $DOCKER_CONFIG/cli-plugins
-        curl -SL https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+        curl -SL "https://github.com/docker/compose/releases/download/${{ env.DOCKER_COMPOSE_VERSION }}/docker-compose-linux-x86_64" -o $DOCKER_CONFIG/cli-plugins/docker-compose
         chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-    - name: Clean up existing Docker resources
-      run: docker compose down --volumes --remove-orphans || true
-
-    #######################
-    # Test Environment Setup
-    #######################
-    - name: Setup test directory
+    - name: Clean Docker environment
       run: |
-        mkdir -p test-results/logs
-        sudo chown -R 1000:1000 test-results
-        sudo chmod -R 777 test-results
+        docker system prune -f
+        docker compose down --volumes --remove-orphans || true
 
-    - name: Create Selenium Grid Network
-      run: docker network create selenium-grid || true
+    - name: Setup test environment
+      run: |
+        mkdir -p ${{ env.TEST_RESULTS_DIR }}/{logs,screenshots,reports}
+        sudo chown -R 1000:1000 ${{ env.TEST_RESULTS_DIR }}
+        sudo chmod -R 777 ${{ env.TEST_RESULTS_DIR }}
 
-    #######################
-    # Selenium Grid Setup
-    #######################
+    - name: Create and verify Selenium Grid network
+      run: |
+        docker network create selenium-grid || true
+        docker network ls | grep selenium-grid
+
     - name: Start Selenium Grid
+      id: start-grid
       run: |
-        docker compose up -d selenium-hub chrome
+        docker compose up -d selenium-hub chrome firefox
         
-        echo "Waiting for Selenium Grid to be ready..."
-        timeout=180
-        start_time=$(date +%s)
+        echo "Waiting for Selenium Grid..."
+        attempt=1
+        max_attempts=36
         
-        # Poll Selenium Grid status until ready or timeout
-        while true; do
-          if curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true"; then
-            echo "Selenium Grid is ready!"
-            break
-          fi
-        
-          current_time=$(date +%s)
-          elapsed=$((current_time - start_time))
-        
-          if [ $elapsed -ge $timeout ]; then
-            echo "Timeout waiting for Selenium Grid"
-            docker compose logs
-            exit 1
-          fi
-        
-          echo "Still waiting... ($elapsed seconds elapsed)"
+        until curl -sSL http://localhost:4444/wd/hub/status | grep -q "\"ready\": true" || [ $attempt -eq $max_attempts ]; do
+          echo "Attempt $attempt/$max_attempts - Grid not ready, waiting..."
           sleep 5
+          attempt=$((attempt + 1))
         done
+        
+        if [ $attempt -eq $max_attempts ]; then
+          echo "::error::Selenium Grid failed to start"
+          docker compose logs
+          exit 1
+        fi
+        
+        echo "Selenium Grid is ready!"
+        docker compose ps
 
-    #######################
-    # Test Execution
-    #######################
     - name: Run tests
+      id: run-tests
       run: |
-        docker compose run --rm test-runner
+        docker compose run --rm \
+          -e PYTEST_ADDOPTS="--dist=loadfile -n auto" \
+          -e COVERAGE=1 \
+          test-runner
 
-    #######################
-    # Logging & Artifacts
-    #######################
-    - name: Print logs on failure
-      if: failure()
+    - name: Generate test reports
+      if: always()
       run: |
-        echo "Selenium Hub Logs:"
-        docker compose logs selenium-hub
-        echo -e "\nChrome Node Logs:"
-        docker compose logs chrome
-        echo -e "\nTest Runner Logs:"
-        docker compose logs test-runner
+        docker compose run --rm test-runner \
+          python -m coverage xml -o ${{ env.TEST_RESULTS_DIR }}/coverage.xml
+        docker compose run --rm test-runner \
+          python -m coverage html -d ${{ env.TEST_RESULTS_DIR }}/coverage_html
 
-    - name: Upload test results
-      if: always()  # Upload results whether tests pass or fail
+    - name: Upload test artifacts
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-results
         path: |
-          test-results/
-          test-results/logs/
+          ${{ env.TEST_RESULTS_DIR }}/
+          ${{ env.TEST_RESULTS_DIR }}/logs/
+          ${{ env.TEST_RESULTS_DIR }}/screenshots/
+          ${{ env.TEST_RESULTS_DIR }}/reports/
+          ${{ env.TEST_RESULTS_DIR }}/coverage.xml
+          ${{ env.TEST_RESULTS_DIR }}/coverage_html/
         retention-days: 30
 
-    #######################
-    # Notifications
-    #######################
-    - name: Slack Notification
+    - name: Publish test results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: "${{ env.TEST_RESULTS_DIR }}/**/test-*.xml"
+        check_name: "Test Results"
+
+    - name: Upload coverage to Codecov
+      if: always()
+      uses: codecov/codecov-action@v4
+      with:
+        file: ${{ env.TEST_RESULTS_DIR }}/coverage.xml
+        fail_ci_if_error: false
+
+    - name: Notify Slack
       if: failure()
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ job.status }}
-        text: 'Tests failed! Check the logs for details.'
         fields: repo,message,commit,author,action,eventName,ref,workflow
+        text: |
+          Test run failed!
+          Repository: ${{ github.repository }}
+          Workflow: ${{ github.workflow }}
+          Run: ${{ github.run_id }}
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    #######################
-    # Cleanup
-    #######################
     - name: Cleanup
-      if: always()  # Always run cleanup, even if previous steps fail
+      if: always()
       run: |
         docker compose down --volumes --remove-orphans
         docker network rm selenium-grid || true

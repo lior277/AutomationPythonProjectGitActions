@@ -1,72 +1,106 @@
-version: '3'
+version: '3.8'
 
 services:
-  #########################
-  # Selenium Hub Service
-  #########################
   selenium-hub:
     image: selenium/hub:4.27.0-20250101
     container_name: selenium-hub
     ports:
-      - "4444:4444"  # Selenium Grid Console
-      - "4442:4442"  # Publish port
-      - "4443:4443"  # Subscribe port
+      - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
+    environment:
+      - GRID_MAX_SESSION=16
+      - GRID_TIMEOUT=300
+      - GRID_BROWSER_TIMEOUT=300
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
     networks:
       - selenium-grid
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
-  #########################
-  # Chrome Node Service
-  #########################
   chrome:
     image: selenium/node-chrome:4.27.0-20250101
-    shm_size: '2g'  # Increased shared memory for better performance
+    shm_size: '2g'
     depends_on:
       selenium-hub:
         condition: service_healthy
     environment:
-      # Event bus configuration
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      # Node configuration
-      - SE_NODE_MAX_SESSIONS=5
+      - SE_NODE_MAX_SESSIONS=4
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_START_XVFB=false
     networks:
       - selenium-grid
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
 
-  #########################
-  # Test Runner Service
-  #########################
+  firefox:
+    image: selenium/node-firefox:4.27.0-20250101
+    shm_size: '2g'
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=4
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_START_XVFB=false
+    networks:
+      - selenium-grid
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
   test-runner:
     build:
       context: .
       dockerfile: Dockerfile
-    user: testuser  # Run as non-root user
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.10}
+    user: testuser
     volumes:
-      # Mount test results directory for persistence
+      - .:/app
       - ./test-results:/app/test-results
-      - ./test-results/logs:/app/test-results/logs
     environment:
-      - PYTHONUNBUFFERED=1  # Ensure Python output is not buffered
+      - PYTHONUNBUFFERED=1
       - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
       - RUN_LOCALLY=false
+      - PYTEST_ADDOPTS=--dist=loadfile -n auto
+      - TEST_RESULTS_DIR=/app/test-results
     depends_on:
-      # Ensure dependencies are ready before starting
       selenium-hub:
         condition: service_healthy
       chrome:
         condition: service_started
+      firefox:
+        condition: service_started
     networks:
       - selenium-grid
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
-#########################
-# Networks Configuration
-#########################
 networks:
   selenium-grid:
-    external: true  # Use pre-existing network created by GitHub Actions
+    external: true
