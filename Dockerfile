@@ -21,7 +21,7 @@ RUN useradd -m testuser && \
     chmod 1777 /tmp/.X11-unix && \
     chown -R testuser:testuser /app /app/test-results /app/logs
 
-# Install system dependencies and Chrome
+# Install Chrome and dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         wget \
@@ -38,15 +38,16 @@ RUN apt-get update && \
         libxi6 \
         libgconf-2-4 \
         default-jdk && \
-    # Install ChromeDriver
-    CHROME_VERSION=$(google-chrome-stable --version | awk '{ print $3 }' | cut -d. -f1) && \
-    wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip && \
-    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
-    rm /tmp/chromedriver.zip && \
-    chmod +x /usr/local/bin/chromedriver && \
-    # Cleanup
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install specific ChromeDriver version
+RUN CHROME_VERSION=$(google-chrome-stable --version | cut -d ' ' -f3) && \
+    CHROMEDRIVER_VERSION=120.0.6099.71 && \
+    wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip && \
+    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
+    rm /tmp/chromedriver.zip && \
+    chmod +x /usr/local/bin/chromedriver
 
 # Copy and install Python requirements
 COPY requirements.txt /app/
