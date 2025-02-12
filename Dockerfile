@@ -38,16 +38,21 @@ RUN apt-get update && \
         libxi6 \
         libgconf-2-4 \
         default-jdk && \
+    # Print Chrome version for debugging
+    google-chrome-stable --version && \
+    # Install matching ChromeDriver version
+    CHROME_VERSION=$(google-chrome-stable --version | cut -d ' ' -f3 | cut -d. -f1) && \
+    echo "Chrome Version: $CHROME_VERSION" && \
+    CHROMEDRIVER_VERSION=121.0.6167.85 && \
+    echo "Installing ChromeDriver version: $CHROMEDRIVER_VERSION" && \
+    wget -O /tmp/chromedriver.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && \
+    unzip /tmp/chromedriver.zip -d /tmp/ && \
+    mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
+    rm -rf /tmp/chromedriver* && \
+    chmod +x /usr/local/bin/chromedriver && \
+    # Cleanup
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Install specific ChromeDriver version
-RUN CHROME_VERSION=$(google-chrome-stable --version | cut -d ' ' -f3) && \
-    CHROMEDRIVER_VERSION=120.0.6099.71 && \
-    wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip && \
-    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
-    rm /tmp/chromedriver.zip && \
-    chmod +x /usr/local/bin/chromedriver
 
 # Copy and install Python requirements
 COPY requirements.txt /app/
