@@ -6,13 +6,14 @@ FROM python:3.10-slim
 ###################
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \    # Prevent Python from writing pyc files
-    PYTHONUNBUFFERED=1 \           # Prevent Python from buffering stdout and stderr
-    PIP_NO_CACHE_DIR=1 \           # Disable pip cache
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \ # Disable pip version check
-    PYTHONPATH=/app \              # Set Python path
-    HOME=/home/testuser \          # Set home directory
-    DISPLAY=:99                    # Set display for virtual framebuffer
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app \
+    HOME=/home/testuser \
+    DISPLAY=:99 \
+    DEBIAN_FRONTEND=noninteractive
 
 # Set the working directory
 WORKDIR /app
@@ -23,10 +24,10 @@ WORKDIR /app
 
 # Create test user and required directories
 RUN useradd -m testuser && \
-    mkdir -p /app/test-results/logs /app/logs && \
+    mkdir -p /app/test-results/{logs,screenshots,reports} && \
     mkdir -p /tmp/.X11-unix && \
     chmod 1777 /tmp/.X11-unix && \
-    chown -R testuser:testuser /app /app/test-results /app/logs
+    chown -R testuser:testuser /app
 
 ###################
 # System Dependencies
@@ -39,15 +40,33 @@ RUN apt-get update && \
         wget \
         unzip \
         gnupg \
-        xvfb \          # Virtual framebuffer
-        libxi6 \        # X11 library
-        libgconf-2-4 \  # GConf library
-        default-jdk \   # Java runtime
-        ca-certificates \ # SSL certificates
-        procps && \     # Process utilities
+        xvfb \
+        libxi6 \
+        libgconf-2-4 \
+        default-jdk \
+        ca-certificates \
+        procps \
+        fonts-liberation \
+        libasound2 \
+        libatk-bridge2.0-0 \
+        libatk1.0-0 \
+        libatspi2.0-0 \
+        libcups2 \
+        libdbus-1-3 \
+        libdrm2 \
+        libgbm1 \
+        libgtk-3-0 \
+        libnspr4 \
+        libnss3 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libxshmfence1 \
+        xdg-utils && \
     # Add Chrome repository and install Chrome
-    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list && \
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /usr/share/keyrings/google-chrome.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
     apt-get update && \
     apt-get install -y google-chrome-stable && \
     # Clean up
@@ -59,8 +78,9 @@ RUN apt-get update && \
 ###################
 
 # Install ChromeDriver
-RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) && \
-    wget -N https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip -P /tmp && \
+RUN CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1) && \
+    CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") && \
+    wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip -P /tmp && \
     unzip /tmp/chromedriver_linux64.zip -d /usr/local/bin && \
     rm /tmp/chromedriver_linux64.zip && \
     chmod +x /usr/local/bin/chromedriver
@@ -69,38 +89,23 @@ RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_
 # Python Dependencies
 ###################
 
-# Copy and install Python requirements
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt pytest-html
+# Copy requirements files
+COPY requirements*.txt /app/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    if [ -f requirements-dev.txt ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
 
 ###################
-# Entrypoint Setup
+# Test Setup
 ###################
+
+# Create and configure test directories
+RUN mkdir -p /app/test-results/{logs,screenshots,reports} && \
+    chown -R testuser:testuser /app/test-results
 
 # Create entrypoint script
-RUN cat << 'EOF' > /app/entrypoint.sh
-#!/bin/bash
-set -e
-
-# Ensure directories exist with proper permissions
-mkdir -p /app/test-results/logs
-chown -R testuser:testuser /app/test-results
-chmod 777 /app/test-results
-
-# Start virtual framebuffer
-Xvfb :99 -screen 0 1920x1080x24 &
-
-# Wait for Xvfb to start
-sleep 1
-
-# Run tests
-cd /app
-python -m pytest tests/ui/ -v \
-    --html=/app/test-results/report.html \
-    --self-contained-html \
-    --capture=tee-sys \
-    --log-cli-level=INFO
-EOF
+COPY docker-entrypoint.sh /app/entrypoint.sh
 
 # Set script permissions
 RUN chmod +x /app/entrypoint.sh && \
@@ -113,8 +118,9 @@ RUN chmod +x /app/entrypoint.sh && \
 # Copy the project files
 COPY --chown=testuser:testuser . /app/
 
-# Ensure all files are owned by testuser
-RUN chown -R testuser:testuser /app
+# Set file permissions
+RUN chown -R testuser:testuser /app && \
+    chmod -R 755 /app
 
 # Switch to non-root user for security
 USER testuser
