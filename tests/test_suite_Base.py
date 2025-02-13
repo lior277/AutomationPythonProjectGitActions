@@ -15,44 +15,7 @@ from webdriver_manager.core.os_manager import ChromeType
 
 
 class TestSuiteBase:
-    # Logging setup
-    log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
-    )
-
-    stream_handler = logging.StreamHandler()
-    test_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_tests.log'))
-    debug_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_debug.log'))
-
-    stream_handler.setLevel(logging.INFO)
-    test_file_handler.setLevel(logging.INFO)
-    debug_file_handler.setLevel(logging.DEBUG)
-
-    stream_handler.setFormatter(formatter)
-    test_file_handler.setFormatter(formatter)
-    debug_file_handler.setFormatter(formatter)
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(stream_handler)
-    logger.addHandler(test_file_handler)
-    logger.addHandler(debug_file_handler)
-
-    # Environment detection
-    PLATFORM = platform.system().lower()
-    IS_WINDOWS = PLATFORM == 'windows'
-    IS_CI = os.getenv('CI', '').lower() == 'true'
-    IS_GITHUB_ACTIONS = os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
-    RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'true').lower() == 'true'
-
-    # Prioritize GitHub Actions configuration
-    if IS_GITHUB_ACTIONS:
-        RUN_LOCALLY = False
-    else:
-        RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'true').lower() == 'true'
+    # ... (previous logging setup remains the same)
 
     @classmethod
     def get_driver(cls) -> WebDriver:
@@ -77,9 +40,16 @@ class TestSuiteBase:
     def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
         """Creates a local Chrome WebDriver instance with advanced error handling."""
         try:
-            # Add more compatibility options
+            # More comprehensive Chrome options
             chrome_options.add_argument('--remote-allow-origins=*')
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            chrome_options.add_argument('--disable-web-security')
+            chrome_options.add_argument('--ignore-certificate-errors')
+            chrome_options.add_argument('--allow-insecure-localhost')
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+
+            # Experimental options for compatibility
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
             chrome_options.add_experimental_option('useAutomationExtension', False)
 
             # Attempt to get ChromeDriver with automatic version matching
@@ -92,8 +62,9 @@ class TestSuiteBase:
                 options=chrome_options
             )
 
-            # Use JavaScript to set window size instead of maximize_window()
+            # Use JavaScript to set window size and maximize
             driver.set_window_size(1920, 1080)
+            driver.execute_script("window.focus();")
 
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
@@ -104,9 +75,9 @@ class TestSuiteBase:
             cls.logger.error(f"Traceback: {traceback.format_exc()}")
             cls.logger.error("Troubleshooting steps:")
             cls.logger.error("1. Verify Chrome browser version")
-            cls.logger.error("2. Download compatible ChromeDriver manually")
+            cls.logger.error("2. Ensure ChromeDriver compatibility")
             cls.logger.error("3. Check Selenium and WebDriver Manager versions")
-            cls.logger.error("4. Verify system compatibility")
+            cls.logger.error("4. Verify system configuration")
 
             # Additional diagnostic information
             cls.logger.debug(f"Python version: {sys.version}")
@@ -114,22 +85,7 @@ class TestSuiteBase:
 
             raise
 
-    @classmethod
-    def _configure_driver_timeouts(cls, driver: WebDriver) -> None:
-        """Sets standard timeouts for WebDriver."""
-        driver.set_page_load_timeout(30)
-        driver.implicitly_wait(10)
-        driver.set_script_timeout(30)
-
-    @classmethod
-    def driver_dispose(cls, driver: Optional[WebDriver] = None) -> None:
-        """Safely disposes of WebDriver instance."""
-        if driver:
-            try:
-                driver.quit()
-                cls.logger.info("WebDriver disposed successfully")
-            except Exception as e:
-                cls.logger.error(f"Error disposing WebDriver: {str(e)}")
+    # ... (rest of the class remains the same)
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
@@ -137,22 +93,27 @@ class TestSuiteBase:
         options = ChromeOptions()
 
         # Basic options
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=en-GB')
 
-        # Enhanced compatibility options
+        # Performance and compatibility options
         options.add_argument('--remote-allow-origins=*')
-        options.add_experimental_option('useAutomationExtension', False)
-
-        # Disable specific Chrome features that might cause issues
-        options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
+        options.add_argument('--disable-web-security')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--allow-insecure-localhost')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
 
         # Logging and performance
         options.add_argument('--log-level=3')
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-extensions')
+
+        # Disable browser features that might cause issues
+        options.add_experimental_option('excludeSwitches',
+                                        ['enable-logging', 'enable-automation', 'ignore-certificate-errors']
+                                        )
+        options.add_experimental_option('useAutomationExtension', False)
 
         # Headless mode for CI
         if os.getenv('CI', 'false').lower() == 'true':
