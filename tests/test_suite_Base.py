@@ -8,7 +8,9 @@ from typing import Optional
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.remote.webdriver import WebDriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class TestSuiteBase:
@@ -77,25 +79,34 @@ class TestSuiteBase:
             raise
 
     @classmethod
-    def _create_local_driver(cls, chrome_options: ChromeOptions ) -> WebDriver:
+    def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
         """Creates a local Chrome WebDriver instance."""
         try:
-            # Ensure chromedriver path is set correctly
-            driver_path = os.getenv('CHROMEDRIVER_PATH', None)
-            if driver_path:
-                cls.logger.info(f"Using custom ChromeDriver path: {driver_path}")
-                driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options)
-            else:
-                cls.logger.info("Using system default ChromeDriver")
-                driver = webdriver.Chrome(options=chrome_options)
+            # Use WebDriver Manager to handle ChromeDriver installation and version matching
+            service = ChromeService(ChromeDriverManager().install())
+
+            cls.logger.info("Attempting to create Chrome WebDriver")
+
+            driver = webdriver.Chrome(
+                service=service,
+                options=chrome_options
+            )
 
             cls._configure_driver_timeouts(driver)
+            driver.maximize_window()
+
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
+
         except WebDriverException as e:
-            cls.logger.error("Failed to initialize WebDriver. Ensure ChromeDriver is installed.")
-            cls.logger.error(str(e))
+            cls.logger.error("Failed to initialize WebDriver. Potential version mismatch:")
+            cls.logger.error(f"Error details: {str(e)}")
+            cls.logger.error("Suggestions:")
+            cls.logger.error("1. Ensure Chrome browser and ChromeDriver versions are compatible")
+            cls.logger.error("2. Update Chrome browser")
+            cls.logger.error("3. Manually download matching ChromeDriver")
             raise
+
         except Exception as e:
             cls._log_driver_creation_error(e, chrome_options)
             raise
@@ -141,11 +152,17 @@ class TestSuiteBase:
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=en-GB')
 
-
+        # Additional language settings
+        options.add_argument('--accept-language=en-US,en;q=0.9')
 
         # Logging configurations
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         options.add_argument('--log-level=3')
+
+        # Performance and compatibility options
+        options.add_argument('--disable-browser-side-navigation')
+        options.add_argument('--enable-features=NetworkService,NetworkServiceInProcess')
+        options.add_argument('--ignore-certificate-errors')
 
         # Add headless mode only in CI
         if os.getenv('CI', 'false').lower() == 'true':
