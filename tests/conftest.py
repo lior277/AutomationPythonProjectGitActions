@@ -70,8 +70,12 @@ def driver_fixture() -> Generator[WebDriver, None, None]:
 
     try:
         base_driver = TestSuiteBase.get_driver()
+
+        # Instead of maximize_window(), set specific window size
+        base_driver.set_window_size(1920, 1080)
+
         driver = EventFiringWebDriver(base_driver, WebDriverListener())
-        driver.maximize_window()
+
         yield driver
 
     except Exception as e:

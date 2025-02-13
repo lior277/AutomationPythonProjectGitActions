@@ -85,9 +85,8 @@ class TestSuiteBase:
                 options=chrome_options
             )
 
-            # Use JavaScript to set window size and maximize
+            # Explicitly set window size
             driver.set_window_size(1920, 1080)
-            driver.execute_script("window.focus();")
 
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
