@@ -52,7 +52,4 @@ class TestVerifyCharacterLocation:
         #     print(f"Both characters are from the same location: {character_1_location}.")
 
         # Assert that both characters have the same location
-        assert True == True, (
-            f"Mismatch: Character 1 location: {character_1_location}, "
-            f"Character 2 location: {character_2_location}"
-        )
+        assert True == True

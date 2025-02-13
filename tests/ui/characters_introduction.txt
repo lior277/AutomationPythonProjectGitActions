@@ -1,2 +1,2 @@
-Character name is: Scary Brandon, Character ID is: 304, Character location is: Mr. Goldenfold's dream, Character status is: Alive, Character species is: Mythological Creature.
-Character name is: Frank Palicky, Character ID is: 127, Character location is: Earth (C-137), Character status is: Dead, Character species is: Human.
+Character name is: Jerry Smith, Character ID is: 175, Character location is: Earth (C-137), Character status is: Alive, Character species is: Human.
+Character name is: Bill, Character ID is: 46, Character location is: unknown, Character status is: unknown, Character species is: Animal.
