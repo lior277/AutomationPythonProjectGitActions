@@ -21,7 +21,7 @@ class TestSuiteBase:
     IS_GITHUB_ACTIONS = os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
 
     # **Force local execution (ignoring SELENIUM_GRID_URL)**
-    RUN_LOCALLY = True  # Ensure local execution
+    RUN_LOCALLY = False  # Ensure local execution
 
     # Set up logging configuration
     log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
