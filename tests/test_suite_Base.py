@@ -77,6 +77,11 @@ class TestSuiteBase:
     def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
         """Creates a local Chrome WebDriver instance with advanced error handling."""
         try:
+            # Add more compatibility options
+            chrome_options.add_argument('--remote-allow-origins=*')
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+
             # Attempt to get ChromeDriver with automatic version matching
             service = ChromeService(ChromeDriverManager().install())
 
@@ -87,8 +92,8 @@ class TestSuiteBase:
                 options=chrome_options
             )
 
-            cls._configure_driver_timeouts(driver)
-            driver.maximize_window()
+            # Use JavaScript to set window size instead of maximize_window()
+            driver.set_window_size(1920, 1080)
 
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
