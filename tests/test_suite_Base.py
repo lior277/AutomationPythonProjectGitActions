@@ -15,7 +15,26 @@ from webdriver_manager.core.os_manager import ChromeType
 
 
 class TestSuiteBase:
-    # ... (previous logging setup remains the same)
+    # Existing logging setup remains the same
+
+    @classmethod
+    def get_driver(cls) -> WebDriver:
+        """Creates and returns a WebDriver instance based on configuration."""
+        cls.logger.info(f"Platform: {cls.PLATFORM}")
+        cls.logger.info(f"CI Mode: {cls.IS_CI}")
+        cls.logger.info(f"GitHub Actions: {cls.IS_GITHUB_ACTIONS}")
+        cls.logger.info(f"Running locally: {cls.RUN_LOCALLY}")
+
+        # Get browser options
+        chrome_options = cls.get_web_driver_options()
+
+        try:
+            cls.logger.info("Forcing local Chrome WebDriver")
+            return cls._create_local_driver(chrome_options)
+        except Exception as e:
+            cls.logger.error(f"Failed to create WebDriver: {str(e)}")
+            cls.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
 
     @classmethod
     def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
@@ -23,8 +42,7 @@ class TestSuiteBase:
         try:
             # Attempt to get ChromeDriver with specific version matching
             driver_path = ChromeDriverManager(
-                chrome_type=ChromeType.GOOGLE,
-                version="133.0.6943.0"  # Specify exact Chrome version
+                chrome_type=ChromeType.GOOGLE
             ).install()
 
             service = ChromeService(executable_path=driver_path)
@@ -47,7 +65,7 @@ class TestSuiteBase:
             cls.logger.error(f"Error details: {str(e)}")
             cls.logger.error(f"Traceback: {traceback.format_exc()}")
             cls.logger.error("Troubleshooting steps:")
-            cls.logger.error("1. Verify Chrome browser version: 133.0.6943.98")
+            cls.logger.error("1. Verify Chrome browser version")
             cls.logger.error("2. Download compatible ChromeDriver manually")
             cls.logger.error("3. Check Selenium and WebDriver Manager versions")
             cls.logger.error("4. Verify system compatibility")
@@ -57,6 +75,23 @@ class TestSuiteBase:
             cls.logger.debug(f"Platform: {platform.platform()}")
 
             raise
+
+    @classmethod
+    def _configure_driver_timeouts(cls, driver: WebDriver) -> None:
+        """Sets standard timeouts for WebDriver."""
+        driver.set_page_load_timeout(30)
+        driver.implicitly_wait(10)
+        driver.set_script_timeout(30)
+
+    @classmethod
+    def driver_dispose(cls, driver: Optional[WebDriver] = None) -> None:
+        """Safely disposes of WebDriver instance."""
+        if driver:
+            try:
+                driver.quit()
+                cls.logger.info("WebDriver disposed successfully")
+            except Exception as e:
+                cls.logger.error(f"Error disposing WebDriver: {str(e)}")
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
@@ -70,7 +105,7 @@ class TestSuiteBase:
         options.add_argument('--lang=en-GB')
 
         # Enhanced compatibility options
-        options.add_argument('--remote-allow-origins=*')  # Important for newer Chrome versions
+        options.add_argument('--remote-allow-origins=*')
         options.add_experimental_option('useAutomationExtension', False)
 
         # Disable specific Chrome features that might cause issues
