@@ -1,40 +1,40 @@
-import logging
-import os
+import sys
 import platform
 import traceback
+import os
+import logging
 from typing import Optional
 
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.remote.webdriver import WebDriver
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 
 
 class TestSuiteBase:
     # Logging setup
-    # Create log directory if it doesn't exist
     log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
     os.makedirs(log_dir, exist_ok=True)
 
-    # Configure logging formatter
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
     )
 
-    # Create handlers
     stream_handler = logging.StreamHandler()
     test_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_tests.log'))
     debug_file_handler = logging.FileHandler(os.path.join(log_dir, 'selenium_debug.log'))
 
-    # Set levels for handlers
     stream_handler.setLevel(logging.INFO)
     test_file_handler.setLevel(logging.INFO)
     debug_file_handler.setLevel(logging.DEBUG)
 
-    # Set formatters for handlers
     stream_handler.setFormatter(formatter)
     test_file_handler.setFormatter(formatter)
     debug_file_handler.setFormatter(formatter)
 
-    # Create class logger
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     logger.addHandler(stream_handler)
@@ -46,9 +46,14 @@ class TestSuiteBase:
     IS_WINDOWS = PLATFORM == 'windows'
     IS_CI = os.getenv('CI', '').lower() == 'true'
     IS_GITHUB_ACTIONS = os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
-    RUN_LOCALLY = True
+    RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'true').lower() == 'true'
 
-    # Rest of the class remains the same as in the previous implementation
+    # Prioritize GitHub Actions configuration
+    if IS_GITHUB_ACTIONS:
+        RUN_LOCALLY = False
+    else:
+        RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'true').lower() == 'true'
+
     @classmethod
     def get_driver(cls) -> WebDriver:
         """Creates and returns a WebDriver instance based on configuration."""
@@ -67,6 +72,43 @@ class TestSuiteBase:
             cls.logger.error(f"Failed to create WebDriver: {str(e)}")
             cls.logger.error(f"Traceback: {traceback.format_exc()}")
             raise
+
+    @classmethod
+    def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
+        """Creates a local Chrome WebDriver instance with advanced error handling."""
+        try:
+            # Attempt to get ChromeDriver with automatic version matching
+            service = ChromeService(ChromeDriverManager().install())
+
+            cls.logger.info(f"Using ChromeDriver from: {service.path}")
+
+            driver = webdriver.Chrome(
+                service=service,
+                options=chrome_options
+            )
+
+            cls._configure_driver_timeouts(driver)
+            driver.maximize_window()
+
+            cls.logger.info("Local Chrome WebDriver created successfully")
+            return driver
+
+        except Exception as e:
+            cls.logger.error("Comprehensive WebDriver initialization failure:")
+            cls.logger.error(f"Error details: {str(e)}")
+            cls.logger.error(f"Traceback: {traceback.format_exc()}")
+            cls.logger.error("Troubleshooting steps:")
+            cls.logger.error("1. Verify Chrome browser version")
+            cls.logger.error("2. Download compatible ChromeDriver manually")
+            cls.logger.error("3. Check Selenium and WebDriver Manager versions")
+            cls.logger.error("4. Verify system compatibility")
+
+            # Additional diagnostic information
+            cls.logger.debug(f"Python version: {sys.version}")
+            cls.logger.debug(f"Platform: {platform.platform()}")
+
+            raise
+
     @classmethod
     def _configure_driver_timeouts(cls, driver: WebDriver) -> None:
         """Sets standard timeouts for WebDriver."""
