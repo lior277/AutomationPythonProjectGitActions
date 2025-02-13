@@ -20,11 +20,8 @@ class TestSuiteBase:
     IS_CI = os.getenv('CI', '').lower() == 'true'
     IS_GITHUB_ACTIONS = os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
 
-    # Execution mode - default to local on Windows
-    RUN_LOCALLY = os.getenv('RUN_LOCALLY', str(IS_WINDOWS)).lower() == 'true'
-
-    # Grid configuration
-    SELENIUM_GRID_URL = os.getenv('SELENIUM_GRID_URL', 'http://localhost:4444/wd/hub')
+    # **Force local execution (ignoring SELENIUM_GRID_URL)**
+    RUN_LOCALLY = True  # Ensure local execution
 
     # Set up logging configuration
     log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
@@ -63,7 +60,6 @@ class TestSuiteBase:
     @classmethod
     def get_driver(cls) -> WebDriver:
         """Creates and returns a WebDriver instance based on configuration."""
-        # Log environment information
         cls.logger.info(f"Platform: {cls.PLATFORM}")
         cls.logger.info(f"CI Mode: {cls.IS_CI}")
         cls.logger.info(f"GitHub Actions: {cls.IS_GITHUB_ACTIONS}")
@@ -73,12 +69,8 @@ class TestSuiteBase:
         chrome_options = cls.get_web_driver_options()
 
         try:
-            if cls.RUN_LOCALLY:
-                cls.logger.info("Creating local Chrome WebDriver")
-                return cls._create_local_driver(chrome_options)
-            else:
-                cls.logger.info(f"Creating remote WebDriver using Grid at {cls.SELENIUM_GRID_URL}")
-                return cls._create_grid_driver(chrome_options)
+            cls.logger.info("Forcing local Chrome WebDriver")
+            return cls._create_local_driver(chrome_options)
         except Exception as e:
             cls.logger.error(f"Failed to create WebDriver: {str(e)}")
             cls.logger.error(f"Traceback: {traceback.format_exc()}")
@@ -88,32 +80,22 @@ class TestSuiteBase:
     def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
         """Creates a local Chrome WebDriver instance."""
         try:
-            # Create local WebDriver
-            driver = webdriver.Chrome(options=chrome_options)
+            # Ensure chromedriver path is set correctly
+            driver_path = os.getenv('CHROMEDRIVER_PATH', None)
+            if driver_path:
+                cls.logger.info(f"Using custom ChromeDriver path: {driver_path}")
+                driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+            else:
+                cls.logger.info("Using system default ChromeDriver")
+                driver = webdriver.Chrome(options=chrome_options)
+
             cls._configure_driver_timeouts(driver)
             cls.logger.info("Local Chrome WebDriver created successfully")
             return driver
-        except Exception as e:
-            cls._log_driver_creation_error(e, chrome_options)
+        except WebDriverException as e:
+            cls.logger.error("Failed to initialize WebDriver. Ensure ChromeDriver is installed.")
+            cls.logger.error(str(e))
             raise
-
-    @classmethod
-    def _create_grid_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
-        """Creates a Remote WebDriver instance for Grid execution."""
-        try:
-            # Set Grid-specific capabilities
-            chrome_options.set_capability('platformName', cls.PLATFORM)
-            chrome_options.set_capability('se:noVNC', True)
-            chrome_options.set_capability('se:vncEnabled', True)
-
-            # Create Remote WebDriver
-            driver = webdriver.Remote(
-                command_executor=cls.SELENIUM_GRID_URL,
-                options=chrome_options
-            )
-            cls._configure_driver_timeouts(driver)
-            cls.logger.info("Grid connection established successfully")
-            return driver
         except Exception as e:
             cls._log_driver_creation_error(e, chrome_options)
             raise
@@ -157,6 +139,9 @@ class TestSuiteBase:
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--window-size=1920,1080')
+        options.add_argument('--lang=en-GB')
+
+
 
         # Logging configurations
         options.add_experimental_option('excludeSwitches', ['enable-logging'])

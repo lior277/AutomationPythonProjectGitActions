@@ -34,7 +34,7 @@ class GoogleImagesPageUi:
 
         if len(image_elements) >= position > 0:
             image_element = image_elements[position - 1]
-            DriverEX.force_click(self, driver=self.driver, by=image_element)
+            DriverEX.force_click(driver=self.driver, by=image_element)
         else:
             print(f"Invalid position: {position}. There are only {len(image_elements)} images.")
 

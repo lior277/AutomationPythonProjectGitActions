@@ -13,6 +13,6 @@ class GoogleHomePageUi:
         self.__images_link = By.CSS_SELECTOR, "a[aria-label='Search for Images ']"
 
     def click_on_images_link(self)-> GoogleSearchImagePageUi:
-        DriverEX.force_click(self, driver=self.driver, by=self.__images_link)
+        DriverEX.force_click(driver=self.driver, by=self.__images_link)
         return GoogleSearchImagePageUi(self.driver)
 

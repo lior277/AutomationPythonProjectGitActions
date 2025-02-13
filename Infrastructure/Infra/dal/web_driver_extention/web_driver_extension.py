@@ -1,23 +1,27 @@
 from typing import Any, List
 
-from selenium import webdriver
 from selenium.common import StaleElementReferenceException, NoSuchElementException, ElementNotInteractableException, \
     ElementNotVisibleException, ElementNotSelectableException, InvalidSelectorException, NoSuchFrameException, \
     WebDriverException
+from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.remote.webdriver import WebDriver
+from time import sleep
 
 from Infrastructure.Infra.dal.string_extentions.string_extentions import is_null_or_empty
 
 
 def ignore_exception_types():
-    ignore_exception = [NoSuchElementException,
-                        ElementNotInteractableException,
-                        ElementNotVisibleException,
-                        ElementNotSelectableException,
-                        InvalidSelectorException,
-                        NoSuchFrameException,
-                        ElementNotInteractableException,
-                        WebDriverException]
+    return [
+        NoSuchElementException,
+        ElementNotInteractableException,
+        ElementNotVisibleException,
+        ElementNotSelectableException,
+        InvalidSelectorException,
+        NoSuchFrameException,
+        WebDriverException
+    ]
 
     return ignore_exception
 
@@ -44,6 +48,8 @@ class NavigateToUrl(object):
         except StaleElementReferenceException:
             sleep(0.3)
 
+        return None
+
 class SearchElements(object):
     def __init__(self, by: tuple):
         self.by = by
@@ -67,13 +73,9 @@ class ScrollToElement(object):
             driver.execute_script("arguments[0]" + ".scrollIntoView(alignToTop = false);", element)
             sleep(0.5)
             return element
-        except StaleElementReferenceException:
-            sleep(0.3)
+        except ElementNotInteractableException as e:
+            ScrollToElement(self.by)(driver)
             return None
-
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.remote.webdriver import WebDriver
-from time import sleep
 
 class ForceClick(object):
     def __init__(self, by: tuple):
@@ -101,7 +103,6 @@ class ForceClick(object):
             ScrollToElement(self.by)
             return None
 
-
 class SendsKeysAuto(object):
     def __init__(self, by: tuple, input_text: str):
         self.by = by
@@ -110,7 +111,7 @@ class SendsKeysAuto(object):
     def __call__(self, driver: webdriver) -> bool:
         try:
             element = driver.find_element(*self.by)
-            new_text = DriverEX.get_element_text(driver=driver, by=self.by)
+            new_text = GetElementText(self.by)(driver)
 
             if self.input_text != new_text:
                 element.clear()
@@ -124,7 +125,6 @@ class SendsKeysAuto(object):
             sleep(0.3)
             return False
 
-
 class GetElementText(object):
     def __init__(self, by: tuple):
         self.by = by
@@ -137,14 +137,15 @@ class GetElementText(object):
             if is_null_or_empty(new_string):
                 new_string = element.get_attribute("value")
                 result = new_string or "Default Value"
-                return str(result)
+
+                return str(result) if result else ""
 
             return str(new_string)
 
         except StaleElementReferenceException:
             sleep(0.3)
-            return None
 
+            return None
 
 class DriverEX:
 
@@ -164,7 +165,7 @@ class DriverEX:
                 .until(SearchElements(by)))
 
     @staticmethod
-    def force_click(self, driver: WebDriver, by) -> None:
+    def force_click(driver: WebDriver, by) -> None:
         force_click = ForceClick(by)
         WebDriverWait(driver=driver, timeout=30, ignored_exceptions=ignore_exception_types()) \
             .until(force_click)

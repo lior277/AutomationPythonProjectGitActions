@@ -16,6 +16,7 @@ class EpisodePageApi:
     async def get_all_episodes(self, url: str) -> EpisodeResponse:
         data = await self.api_access.execute_get_request_async(url)
         episodes = [Episode(**episode) for episode in data['results']]
+
         return EpisodeResponse(results=episodes, info=data['info'])
 
     async def fetch_character_details(self, url: str) -> Character:
