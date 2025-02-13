@@ -77,7 +77,7 @@ class TestSuiteBase:
             raise
 
     @classmethod
-    def _create_local_driver(cls, chrome_options: ChromeOptions) -> WebDriver:
+    def _create_local_driver(cls, chrome_options: ChromeOptions ) -> WebDriver:
         """Creates a local Chrome WebDriver instance."""
         try:
             # Ensure chromedriver path is set correctly
