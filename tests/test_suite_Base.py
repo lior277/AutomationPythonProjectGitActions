@@ -15,7 +15,30 @@ from webdriver_manager.core.os_manager import ChromeType
 
 
 class TestSuiteBase:
-    # ... (previous logging setup remains the same)
+    # Logging setup
+    log_dir = os.path.join(os.getcwd(), 'test-results', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(os.path.join(log_dir, 'selenium_tests.log')),
+            logging.FileHandler(os.path.join(log_dir, 'selenium_debug.log'))
+        ]
+    )
+
+    # Create class logger
+    logger = logging.getLogger(__name__)
+
+    # Environment detection
+    PLATFORM = platform.system().lower()
+    IS_WINDOWS = PLATFORM == 'windows'
+    IS_CI = os.getenv('CI', '').lower() == 'true'
+    IS_GITHUB_ACTIONS = os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
+    RUN_LOCALLY = os.getenv('RUN_LOCALLY', 'true').lower() == 'true'
 
     @classmethod
     def get_driver(cls) -> WebDriver:
@@ -85,7 +108,22 @@ class TestSuiteBase:
 
             raise
 
-    # ... (rest of the class remains the same)
+    @classmethod
+    def _configure_driver_timeouts(cls, driver: WebDriver) -> None:
+        """Sets standard timeouts for WebDriver."""
+        driver.set_page_load_timeout(30)
+        driver.implicitly_wait(10)
+        driver.set_script_timeout(30)
+
+    @classmethod
+    def driver_dispose(cls, driver: Optional[WebDriver] = None) -> None:
+        """Safely disposes of WebDriver instance."""
+        if driver:
+            try:
+                driver.quit()
+                cls.logger.info("WebDriver disposed successfully")
+            except Exception as e:
+                cls.logger.error(f"Error disposing WebDriver: {str(e)}")
 
     @staticmethod
     def get_web_driver_options() -> ChromeOptions:
